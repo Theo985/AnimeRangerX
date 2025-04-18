@@ -56,13 +56,13 @@ if game.PlaceId == expectedGameId then
     menu.BorderSizePixel = 0  -- Supprime les bordures
 
     -- Ajout d'onglets (boutons) dans le menu
-    local onglet1 = Instance.new("TextButton")
-    onglet1.Parent = menu
-    onglet1.Size = UDim2.new(1, 0, 0, 50)
-    onglet1.Position = UDim2.new(0, 0, 0, 0)
-    onglet1.Text = "Main"  -- Onglet 1 -> Main
-    onglet1.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    onglet1.TextColor3 = Color3.fromRGB(255, 255, 255)
+    local Main = Instance.new("TextButton")
+    Main.Parent = menu
+    Main.Size = UDim2.new(1, 0, 0, 50)
+    Main.Position = UDim2.new(0, 0, 0, 0)
+    Main.Text = "Main"  -- Onglet 1 -> Main
+    Main.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    Main.TextColor3 = Color3.fromRGB(255, 255, 255)
 
     local onglet2 = Instance.new("TextButton")
     onglet2.Parent = menu
