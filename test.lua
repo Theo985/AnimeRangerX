@@ -63,7 +63,7 @@ if game.PlaceId == expectedGameId then
     onglet1.Text = "Onglet 1"
     onglet1.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     onglet1.TextColor3 = Color3.fromRGB(255, 255, 255)
-    
+
     local onglet2 = Instance.new("TextButton")
     onglet2.Parent = menu
     onglet2.Size = UDim2.new(1, 0, 0, 50)
@@ -71,6 +71,15 @@ if game.PlaceId == expectedGameId then
     onglet2.Text = "Onglet 2"
     onglet2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     onglet2.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    -- Applique un UICorner pour arrondir les coins des boutons
+    local corner1 = Instance.new("UICorner")
+    corner1.CornerRadius = UDim.new(0, 10)  -- Coins arrondis de 10 pixels
+    corner1.Parent = onglet1
+
+    local corner2 = Instance.new("UICorner")
+    corner2.CornerRadius = UDim.new(0, 10)  -- Coins arrondis de 10 pixels
+    corner2.Parent = onglet2
 
     -- Crée un bouton pour rétracter le GUI
     local retractButton = Instance.new("TextButton")
@@ -81,7 +90,6 @@ if game.PlaceId == expectedGameId then
     retractButton.TextColor3 = Color3.fromRGB(0, 0, 0)
     retractButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
     retractButton.BorderSizePixel = 0
-    retractButton.BorderRadius = UDim.new(0, 10)
 
     -- Ajouter un UICorner au bouton (pour arrondir ses coins)
     local buttonCorner = Instance.new("UICorner")
