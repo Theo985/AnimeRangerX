@@ -23,3 +23,5 @@ if game.PlaceId == expectedGameId then
 
     -- Tu peux ajouter plus d'éléments à ce panneau, comme des textes ou des boutons
 end
+
+
