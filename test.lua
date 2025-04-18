@@ -39,9 +39,13 @@ if game.PlaceId == expectedGameId then
     panel.Position = UDim2.new(0.5, -200, 0.5, -100)  -- Centré à l'écran
     panel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)  -- Fond blanc
     panel.BackgroundTransparency = 0.8  -- 80% de transparence (20% opaque)
-    panel.BorderRadius = UDim.new(0, 20)  -- Coins arrondis
     panel.Draggable = true  -- Permet de déplacer le panneau
     panel.Active = true  -- Le panneau peut recevoir des événements comme le drag
+
+    -- Ajouter un UICorner pour les coins arrondis
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 20)  -- Coins arrondis
+    corner.Parent = panel
 
     -- Ajout d'un bouton pour rétracter le GUI
     local retractButton = Instance.new("TextButton")
@@ -69,7 +73,7 @@ if game.PlaceId == expectedGameId then
         end
         isRetracted = not isRetracted
     end)
-    
+
     -- Si l'ID du jeu ne correspond pas, affiche une notification d'erreur
     safeNotify("❌ Jeu Incorrect", "Tu n'es pas dans le bon jeu !", 5)
 end
