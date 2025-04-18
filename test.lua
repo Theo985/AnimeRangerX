@@ -60,7 +60,7 @@ if game.PlaceId == expectedGameId then
     onglet1.Parent = menu
     onglet1.Size = UDim2.new(1, 0, 0, 50)
     onglet1.Position = UDim2.new(0, 0, 0, 0)
-    onglet1.Text = "Onglet 1"
+    onglet1.Text = "Main"  -- Onglet 1 -> Main
     onglet1.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     onglet1.TextColor3 = Color3.fromRGB(255, 255, 255)
 
@@ -68,7 +68,7 @@ if game.PlaceId == expectedGameId then
     onglet2.Parent = menu
     onglet2.Size = UDim2.new(1, 0, 0, 50)
     onglet2.Position = UDim2.new(0, 0, 0, 50)
-    onglet2.Text = "Onglet 2"
+    onglet2.Text = "Play"  -- Onglet 2 -> Play
     onglet2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     onglet2.TextColor3 = Color3.fromRGB(255, 255, 255)
 
