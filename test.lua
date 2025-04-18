@@ -42,9 +42,9 @@ if game.PlaceId == expectedGameId then
     panel.Draggable = true  -- Permet de déplacer le panneau
     panel.Active = true  -- Le panneau peut recevoir des événements comme le drag
 
-    -- Ajouter un UICorner pour les coins arrondis
+    -- Ajouter un UICorner pour les coins arrondis (appliqué au Frame)
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 20)  -- Coins arrondis
+    corner.CornerRadius = UDim.new(0, 20)  -- Coins arrondis de 20 pixels
     corner.Parent = panel
 
     -- Ajout d'un bouton pour rétracter le GUI
@@ -55,7 +55,11 @@ if game.PlaceId == expectedGameId then
     retractButton.Text = "Rétracter"
     retractButton.TextColor3 = Color3.fromRGB(0, 0, 0)
     retractButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    retractButton.BorderRadius = UDim.new(0, 10)
+    
+    -- Ajouter un UICorner au bouton (pour arrondir aussi ses coins)
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 10)  -- Coins arrondis de 10 pixels
+    buttonCorner.Parent = retractButton
 
     -- Variable pour savoir si le panneau est rétracté ou non
     local isRetracted = false
@@ -74,6 +78,21 @@ if game.PlaceId == expectedGameId then
         isRetracted = not isRetracted
     end)
 
+    -- Essaie de charger le script depuis l'URL raw
+    local success, errorMsg = pcall(function()
+        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/Theo985/AnimeRangerX/main/test.lua")
+        loadstring(scriptContent)()  -- Exécute le script récupéré
+    end)
+
+    -- Si une erreur survient lors du chargement du script externe, on affiche un message d'erreur
+    if not success then
+        warn("Erreur lors du chargement du script externe : " .. errorMsg)
+        safeNotify("❌ Erreur", "Erreur lors du chargement du script : " .. errorMsg, 5)
+    else
+        -- Si tout est bon, affiche une notification de succès
+        safeNotify("✅ Script Chargé", "Le script a été chargé avec succès.", 5)
+    end
+else
     -- Si l'ID du jeu ne correspond pas, affiche une notification d'erreur
     safeNotify("❌ Jeu Incorrect", "Tu n'es pas dans le bon jeu !", 5)
 end
