@@ -32,33 +32,60 @@ if game.PlaceId == expectedGameId then
     local screenGui = Instance.new("ScreenGui")
     screenGui.Parent = playerGui
 
-    -- Crée le Frame (panneau)
+    -- Crée le Frame principal (panneau)
     local panel = Instance.new("Frame")
     panel.Parent = screenGui
-    panel.Size = UDim2.new(0, 400, 0, 200)  -- Taille du panneau (400x200 pixels)
-    panel.Position = UDim2.new(0.5, -200, 0.5, -100)  -- Centré à l'écran
+    panel.Size = UDim2.new(0, 300, 0, 500)  -- Taille du panneau (300x500 pixels)
+    panel.Position = UDim2.new(0, 0, 0.5, -250)  -- Centré verticalement à gauche de l'écran
     panel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)  -- Fond blanc
-    panel.BackgroundTransparency = 0.8  -- 80% de transparence (20% opaque)
+    panel.BackgroundTransparency = 0.7  -- 70% de transparence (30% opaque)
     panel.Draggable = true  -- Permet de déplacer le panneau
     panel.Active = true  -- Le panneau peut recevoir des événements comme le drag
 
-    -- Ajouter un UICorner pour les coins arrondis (appliqué au Frame)
+    -- Ajouter un UICorner pour les coins arrondis (appliqué au Frame principal)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 20)  -- Coins arrondis de 20 pixels
     corner.Parent = panel
 
-    -- Ajout d'un bouton pour rétracter le GUI
+    -- Crée un menu vertical à gauche (les onglets)
+    local menu = Instance.new("Frame")
+    menu.Parent = panel
+    menu.Size = UDim2.new(0, 50, 1, 0)  -- Menu vertical à gauche
+    menu.BackgroundColor3 = Color3.fromRGB(50, 50, 50)  -- Fond gris foncé
+    menu.BackgroundTransparency = 0.5  -- Légère transparence
+    menu.BorderSizePixel = 0  -- Supprime les bordures
+
+    -- Ajout d'onglets (boutons) dans le menu
+    local onglet1 = Instance.new("TextButton")
+    onglet1.Parent = menu
+    onglet1.Size = UDim2.new(1, 0, 0, 50)
+    onglet1.Position = UDim2.new(0, 0, 0, 0)
+    onglet1.Text = "Onglet 1"
+    onglet1.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    onglet1.TextColor3 = Color3.fromRGB(255, 255, 255)
+    
+    local onglet2 = Instance.new("TextButton")
+    onglet2.Parent = menu
+    onglet2.Size = UDim2.new(1, 0, 0, 50)
+    onglet2.Position = UDim2.new(0, 0, 0, 50)
+    onglet2.Text = "Onglet 2"
+    onglet2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    onglet2.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    -- Crée un bouton pour rétracter le GUI
     local retractButton = Instance.new("TextButton")
     retractButton.Parent = panel
-    retractButton.Size = UDim2.new(0, 100, 0, 30)
-    retractButton.Position = UDim2.new(0.5, -50, 0, 170)  -- En bas au centre
-    retractButton.Text = "Rétracter"
+    retractButton.Size = UDim2.new(0, 50, 0, 50)
+    retractButton.Position = UDim2.new(1, -50, 0, 0)  -- Bouton rétracter en haut à droite
+    retractButton.Text = "-"
     retractButton.TextColor3 = Color3.fromRGB(0, 0, 0)
     retractButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    
-    -- Ajouter un UICorner au bouton (pour arrondir aussi ses coins)
+    retractButton.BorderSizePixel = 0
+    retractButton.BorderRadius = UDim.new(0, 10)
+
+    -- Ajouter un UICorner au bouton (pour arrondir ses coins)
     local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(0, 10)  -- Coins arrondis de 10 pixels
+    buttonCorner.CornerRadius = UDim.new(0, 10)
     buttonCorner.Parent = retractButton
 
     -- Variable pour savoir si le panneau est rétracté ou non
@@ -67,26 +94,17 @@ if game.PlaceId == expectedGameId then
     -- Fonction pour rétracter/agrandir le GUI
     retractButton.MouseButton1Click:Connect(function()
         if isRetracted then
-            -- Rétablir la taille initiale
-            panel.Size = UDim2.new(0, 400, 0, 200)
-            retractButton.Text = "Rétracter"
+            -- Restaurer la taille originale
+            panel.Size = UDim2.new(0, 300, 0, 500)
+            retractButton.Text = "-"
         else
-            -- Rétracter le panneau
-            panel.Size = UDim2.new(0, 400, 0, 50)  -- Réduire la taille du panneau
-            retractButton.Text = "Agrandir"
+            -- Rétracter le panneau à une barre (en largeur)
+            panel.Size = UDim2.new(0, 50, 0, 500)  -- Réduire la largeur du panneau
+            retractButton.Text = "+"
         end
         isRetracted = not isRetracted
     end)
 
-    -- Si une erreur survient lors du chargement du script externe, on affiche un message d'erreur
-    if not success then
-        warn("Erreur lors du chargement du script externe : " .. errorMsg)
-        safeNotify("❌ Erreur", "Erreur lors du chargement du script : " .. errorMsg, 5)
-    else
-        -- Si tout est bon, affiche une notification de succès
-        safeNotify("✅ Script Chargé", "Le script a été chargé avec succès.", 5)
-    end
-else
     -- Si l'ID du jeu ne correspond pas, affiche une notification d'erreur
     safeNotify("❌ Jeu Incorrect", "Tu n'es pas dans le bon jeu !", 5)
 end
