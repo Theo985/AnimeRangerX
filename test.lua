@@ -88,11 +88,20 @@ if game.PlaceId == expectedGameId then
     buttonCorner.CornerRadius = UDim.new(0, 10)
     buttonCorner.Parent = retractButton
 
-    -- Variable pour savoir si le panneau est rétracté ou non
+    -- Vérification et initialisation de la variable isRetracted
     local isRetracted = false
 
     -- Fonction pour rétracter/agrandir le GUI
     retractButton.MouseButton1Click:Connect(function()
+        if not panel then
+            warn("Panel not found")
+            return
+        end
+        if not retractButton then
+            warn("RetractButton not found")
+            return
+        end
+
         if isRetracted then
             -- Restaurer la taille originale
             panel.Size = UDim2.new(0, 300, 0, 500)
@@ -105,6 +114,21 @@ if game.PlaceId == expectedGameId then
         isRetracted = not isRetracted
     end)
 
+    -- Essaie de charger le script depuis l'URL raw
+    local success, errorMsg = pcall(function()
+        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/Theo985/AnimeRangerX/main/test.lua")
+        loadstring(scriptContent)()  -- Exécute le script récupéré
+    end)
+
+    -- Si une erreur survient lors du chargement du script externe, on affiche un message d'erreur
+    if not success then
+        warn("Erreur lors du chargement du script externe : " .. errorMsg)
+        safeNotify("❌ Erreur", "Erreur lors du chargement du script : " .. errorMsg, 5)
+    else
+        -- Si tout est bon, affiche une notification de succès
+        safeNotify("✅ Script Chargé", "Le script a été chargé avec succès.", 5)
+    end
+else
     -- Si l'ID du jeu ne correspond pas, affiche une notification d'erreur
     safeNotify("❌ Jeu Incorrect", "Tu n'es pas dans le bon jeu !", 5)
 end
