@@ -1,4 +1,4 @@
--- Fonction pour envoyer une notification
+-- Fonction pour afficher une notification dans le jeu
 local function safeNotify(title, text, duration)
     while not pcall(function()
         game.StarterGui:SetCore("SendNotification", {
@@ -9,132 +9,47 @@ local function safeNotify(title, text, duration)
     end) do wait() end
 end
 
--- Affiche une notification indiquant que le script a démarré
-safeNotify("🚀 Script Lancé", "Le script a bien démarré!", 5)
+-- Fonction pour copier dans le presse-papier
+local function copyToClipboard(text)
+    setclipboard(text)  -- Copie le texte dans le presse-papier
+end
 
--- Attendre que le jeu soit bien chargé avant de continuer
+-- Attends que le jeu soit complètement chargé
 while not game:IsLoaded() do
-    wait(1)
+    wait(1)  -- Attendre un peu avant de vérifier à nouveau
 end
 
 -- ID du jeu attendu
 local expectedGameId = 72829404259339
 
--- Vérifie si on est dans le bon jeu
+-- Vérifie si tu es dans le bon jeu
 if game.PlaceId == expectedGameId then
-    -- Affiche une notification si on est dans le bon jeu
-    safeNotify("🕹️ Jeu Correct", "Tu es dans le bon jeu !", 5)
-
-    -- Attendre que PlayerGui soit disponible
+    -- Crée un ScreenGui pour afficher l'interface
     local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-    -- Crée un ScreenGui
     local screenGui = Instance.new("ScreenGui")
     screenGui.Parent = playerGui
 
-    -- Crée le Frame principal (panneau)
+    -- Crée un panneau (Frame) principal
     local panel = Instance.new("Frame")
     panel.Parent = screenGui
-    panel.Size = UDim2.new(0, 300, 0, 500)  -- Taille du panneau (300x500 pixels)
-    panel.Position = UDim2.new(0, 0, 0.5, -250)  -- Centré verticalement à gauche de l'écran
+    panel.Size = UDim2.new(0, 400, 0, 300)  -- Taille du panneau (400x300 pixels)
+    panel.Position = UDim2.new(0.5, -200, 0.5, -150)  -- Centré à l'écran
     panel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)  -- Fond blanc
-    panel.BackgroundTransparency = 0.7  -- 70% de transparence (30% opaque)
-    panel.Draggable = true  -- Permet de déplacer le panneau
-    panel.Active = true  -- Le panneau peut recevoir des événements comme le drag
+    panel.BackgroundTransparency = 0.7  -- 70% de transparence
+    panel.BorderSizePixel = 0  -- Pas de bordure
+    panel.Active = true  -- Permet de déplacer le panneau
+    panel.Draggable = true  -- Le panneau peut être déplacé
 
-    -- Ajouter un UICorner pour les coins arrondis (appliqué au Frame principal)
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 20)  -- Coins arrondis de 20 pixels
-    corner.Parent = panel
+    -- Bouton de rétraction
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Parent = panel
+    toggleButton.Size = UDim2.new(0, 30, 0, 30)
+    toggleButton.Position = UDim2.new(1, -30, 0, 0)
+    toggleButton.Text = "-"
+    toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)  -- Couleur du bouton
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-    -- Crée un menu vertical à gauche (les onglets)
-    local menu = Instance.new("Frame")
-    menu.Parent = panel
-    menu.Size = UDim2.new(0, 50, 1, 0)  -- Menu vertical à gauche
-    menu.BackgroundColor3 = Color3.fromRGB(50, 50, 50)  -- Fond gris foncé
-    menu.BackgroundTransparency = 0.5  -- Légère transparence
-    menu.BorderSizePixel = 0  -- Supprime les bordures
-
-    -- Ajout d'onglets (boutons) dans le menu
-    local onglet1 = Instance.new("TextButton")
-    onglet1.Parent = menu
-    onglet1.Size = UDim2.new(1, 0, 0, 50)
-    onglet1.Position = UDim2.new(0, 0, 0, 0)
-    onglet1.Text = "Main"  -- Onglet 1 -> Main
-    onglet1.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    onglet1.TextColor3 = Color3.fromRGB(255, 255, 255)
-
-    local onglet2 = Instance.new("TextButton")
-    onglet2.Parent = menu
-    onglet2.Size = UDim2.new(1, 0, 0, 50)
-    onglet2.Position = UDim2.new(0, 0, 0, 50)
-    onglet2.Text = "Play"  -- Onglet 2 -> Play
-    onglet2.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    onglet2.TextColor3 = Color3.fromRGB(255, 255, 255)
-
-    -- Applique un UICorner pour arrondir les coins des boutons
-    local corner1 = Instance.new("UICorner")
-    corner1.CornerRadius = UDim.new(0, 10)  -- Coins arrondis de 10 pixels
-    corner1.Parent = onglet1
-
-    local corner2 = Instance.new("UICorner")
-    corner2.CornerRadius = UDim.new(0, 10)  -- Coins arrondis de 10 pixels
-    corner2.Parent = onglet2
-
-    -- Crée un bouton pour rétracter le GUI
-    local retractButton = Instance.new("TextButton")
-    retractButton.Parent = panel
-    retractButton.Size = UDim2.new(0, 50, 0, 50)
-    retractButton.Position = UDim2.new(1, -50, 0, 0)  -- Bouton rétracter en haut à droite
-    retractButton.Text = "-"
-    retractButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-    retractButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    retractButton.BorderSizePixel = 0
-
-    -- Ajouter un UICorner au bouton (pour arrondir ses coins)
-    local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(0, 10)
-    buttonCorner.Parent = retractButton
-
-    -- Vérification et initialisation de la variable isRetracted
-    local isRetracted = false
-
-    -- Fonction pour rétracter/agrandir le GUI
-    retractButton.MouseButton1Click:Connect(function()
-        if not panel then
-            warn("Panel not found")
-            return
-        end
-        if not retractButton then
-            warn("RetractButton not found")
-            return
-        end
-
-        if isRetracted then
-            -- Restaurer la taille originale
-            panel.Size = UDim2.new(0, 300, 0, 500)
-            retractButton.Text = "-"
-        else
-            -- Rétracter le panneau à une barre (en largeur)
-            panel.Size = UDim2.new(0, 50, 0, 500)  -- Réduire la largeur du panneau
-            retractButton.Text = "+"
-        end
-        isRetracted = not isRetracted
-    end)
-
-    -- Fonction pour copier le lien Discord dans le presse-papier
-    local function copyToClipboard(text)
-        -- Ceci utilise une méthode pour copier un texte dans le presse-papier
-        local success, err = pcall(function()
-            setclipboard(text)  -- setclipboard est une méthode fournie par Roblox pour mettre dans le presse-papier
-        end)
-
-        if not success then
-            warn("Erreur lors de la copie du texte dans le presse-papier : " .. err)
-        end
-    end
-
-    -- Crée un "bloc de texte" pour afficher des informations sur le jeu
+    -- Crée un bloc de texte pour afficher des informations
     local infoBlock = Instance.new("Frame")
     infoBlock.Parent = panel
     infoBlock.Size = UDim2.new(0, 240, 0, 150)  -- Taille du bloc d'information
@@ -156,7 +71,8 @@ if game.PlaceId == expectedGameId then
     gameLabel.Parent = infoBlock
     gameLabel.Size = UDim2.new(1, 0, 0, 30)
     gameLabel.Position = UDim2.new(0, 0, 0, 30)
-    gameLabel.Text = "Game : " .. game.PlaceId  -- Affiche l'ID du jeu
+    local gameId = game.PlaceId or "ID non disponible"  -- Si PlaceId est nil, utilise un message par défaut
+    gameLabel.Text = "Game : " .. tostring(gameId)  -- Utilise tostring pour éviter l'erreur de concaténation
     gameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     gameLabel.BackgroundTransparency = 1
 
@@ -183,4 +99,36 @@ if game.PlaceId == expectedGameId then
         copyToClipboard(discordLink)  -- Copie le lien Discord dans le presse-papier
         safeNotify("✅ Copié", "Le lien Discord a été copié dans ton presse-papier.", 5)
     end)
+
+    -- Fonction pour rétracter/agrandir le panneau
+    local isCollapsed = false
+    toggleButton.MouseButton1Click:Connect(function()
+        if isCollapsed then
+            panel.Size = UDim2.new(0, 400, 0, 300)  -- Taille d'origine
+            toggleButton.Text = "-"
+            isCollapsed = false
+        else
+            panel.Size = UDim2.new(0, 30, 0, 30)  -- Taille réduite à une barre
+            toggleButton.Text = "+"
+            isCollapsed = true
+        end
+    end)
+
+    -- Essaie de charger le script depuis l'URL raw
+    local success, errorMsg = pcall(function()
+        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/Theo985/AnimeRangerX/main/test.lua")
+        loadstring(scriptContent)()  -- Exécute le script récupéré
+    end)
+
+    -- Si une erreur survient lors du chargement du script externe, on affiche un message d'erreur
+    if not success then
+        warn("Erreur lors du chargement du script externe : " .. errorMsg)
+        safeNotify("❌ Erreur", "Erreur lors du chargement du script : " .. errorMsg, 5)
+    else
+        -- Si tout est bon, affiche une notification de succès
+        safeNotify("✅ Script Chargé", "Le script a été chargé avec succès.", 5)
+    end
+else
+    -- Si ce n'est pas le bon jeu, on kick le joueur
+    game.Players.LocalPlayer:Kick("Ce script n'est autorisé que dans le jeu avec l'ID : " .. expectedGameId)
 end
