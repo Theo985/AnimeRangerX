@@ -56,13 +56,13 @@ if game.PlaceId == expectedGameId then
     menu.BorderSizePixel = 0  -- Supprime les bordures
 
     -- Ajout d'onglets (boutons) dans le menu
-    local Main = Instance.new("TextButton")
-    Main.Parent = menu
-    Main.Size = UDim2.new(1, 0, 0, 50)
-    Main.Position = UDim2.new(0, 0, 0, 0)
-    Main.Text = "Main"  -- Onglet 1 -> Main
-    Main.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    Main.TextColor3 = Color3.fromRGB(255, 255, 255)
+    local onglet1 = Instance.new("TextButton")
+    onglet1.Parent = menu
+    onglet1.Size = UDim2.new(1, 0, 0, 50)
+    onglet1.Position = UDim2.new(0, 0, 0, 0)
+    onglet1.Text = "Main"  -- Onglet 1 -> Main
+    onglet1.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    onglet1.TextColor3 = Color3.fromRGB(255, 255, 255)
 
     local onglet2 = Instance.new("TextButton")
     onglet2.Parent = menu
@@ -121,16 +121,66 @@ if game.PlaceId == expectedGameId then
         end
         isRetracted = not isRetracted
     end)
-    
-    -- Si une erreur survient lors du chargement du script externe, on affiche un message d'erreur
-    if not success then
-        warn("Erreur lors du chargement du script externe : " .. errorMsg)
-        safeNotify("❌ Erreur", "Erreur lors du chargement du script : " .. errorMsg, 5)
-    else
-        -- Si tout est bon, affiche une notification de succès
-        safeNotify("✅ Script Chargé", "Le script a été chargé avec succès.", 5)
+
+    -- Fonction pour copier le lien Discord dans le presse-papier
+    local function copyToClipboard(text)
+        -- Ceci utilise une méthode pour copier un texte dans le presse-papier
+        local success, err = pcall(function()
+            setclipboard(text)  -- setclipboard est une méthode fournie par Roblox pour mettre dans le presse-papier
+        end)
+
+        if not success then
+            warn("Erreur lors de la copie du texte dans le presse-papier : " .. err)
+        end
     end
-else
-    -- Si l'ID du jeu ne correspond pas, affiche une notification d'erreur
-    safeNotify("❌ Jeu Incorrect", "Tu n'es pas dans le bon jeu !", 5)
+
+    -- Crée un "bloc de texte" pour afficher des informations sur le jeu
+    local infoBlock = Instance.new("Frame")
+    infoBlock.Parent = panel
+    infoBlock.Size = UDim2.new(0, 240, 0, 150)  -- Taille du bloc d'information
+    infoBlock.Position = UDim2.new(0, 50, 0, 60)  -- Positionnement à l'intérieur du panneau
+    infoBlock.BackgroundTransparency = 0.8  -- 80% transparent
+    infoBlock.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Fond noir
+    infoBlock.BorderSizePixel = 0  -- Pas de bordure
+
+    -- Texte "Owner : Kondax"
+    local ownerLabel = Instance.new("TextLabel")
+    ownerLabel.Parent = infoBlock
+    ownerLabel.Size = UDim2.new(1, 0, 0, 30)
+    ownerLabel.Text = "Owner : Kondax"
+    ownerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ownerLabel.BackgroundTransparency = 1
+
+    -- Texte "Game : <Nom du jeu ou ID>"
+    local gameLabel = Instance.new("TextLabel")
+    gameLabel.Parent = infoBlock
+    gameLabel.Size = UDim2.new(1, 0, 0, 30)
+    gameLabel.Position = UDim2.new(0, 0, 0, 30)
+    gameLabel.Text = "Game : " .. game.PlaceId  -- Affiche l'ID du jeu
+    gameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    gameLabel.BackgroundTransparency = 1
+
+    -- Texte "FPS : <FPS actuel>"
+    local fpsLabel = Instance.new("TextLabel")
+    fpsLabel.Parent = infoBlock
+    fpsLabel.Size = UDim2.new(1, 0, 0, 30)
+    fpsLabel.Position = UDim2.new(0, 0, 0, 60)
+    fpsLabel.Text = "FPS : " .. math.floor(game:GetService("Stats").PerformanceStats.Fps)  -- Affiche le FPS actuel
+    fpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fpsLabel.BackgroundTransparency = 1
+
+    -- Bouton Discord
+    local discordButton = Instance.new("TextButton")
+    discordButton.Parent = infoBlock
+    discordButton.Size = UDim2.new(0, 240, 0, 30)
+    discordButton.Position = UDim2.new(0, 0, 0, 120)
+    discordButton.Text = "Discord Link"
+    discordButton.BackgroundColor3 = Color3.fromRGB(0, 122, 255)  -- Bleu de Discord
+    discordButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    discordButton.MouseButton1Click:Connect(function()
+        local discordLink = "https://discord.gg/tonliendiscord"  -- Remplace par ton lien Discord
+        copyToClipboard(discordLink)  -- Copie le lien Discord dans le presse-papier
+        safeNotify("✅ Copié", "Le lien Discord a été copié dans ton presse-papier.", 5)
+    end)
 end
