@@ -121,13 +121,7 @@ if game.PlaceId == expectedGameId then
         end
         isRetracted = not isRetracted
     end)
-
-    -- Essaie de charger le script depuis l'URL raw
-    local success, errorMsg = pcall(function()
-        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/Theo985/AnimeRangerX/main/test.lua")
-        loadstring(scriptContent)()  -- Exécute le script récupéré
-    end)
-
+    
     -- Si une erreur survient lors du chargement du script externe, on affiche un message d'erreur
     if not success then
         warn("Erreur lors du chargement du script externe : " .. errorMsg)
