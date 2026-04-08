@@ -367,25 +367,27 @@ local function CreatePlayerProfile(parent)
 end
 
 -- ============================================================
--- RGB COLOR PICKER (avec gestion dynamique de hauteur)
+-- RGB COLOR PICKER (popup style with dynamic shift)
 -- ============================================================
 
 local function CreateRGBPicker(parent, currentColor, callback)
-    local pickerFrame = Utility.Frame({
-        Name = "RGBPicker",
+    -- Frame principal qui s'ajoute sous l'élément appelant
+    local container = Utility.Frame({
+        Name = "RGBContainer",
         Color = Theme.ElementBg,
-        Size = UDim2.new(1, 0, 0, 100),
+        Size = UDim2.new(1, -28, 0, 110),
+        Position = UDim2.new(0, 14, 1, 4),
         Parent = parent,
     })
-    Utility.Corner(pickerFrame)
-    Utility.Stroke(pickerFrame, Theme.ElementBorder, 1)
-    pickerFrame.Visible = false  -- caché par défaut
+    Utility.Corner(container, UDim.new(0, 8))
+    Utility.Stroke(container, Theme.ElementBorder, 1)
+    container.Visible = false
 
     local r, g, b = currentColor.R, currentColor.G, currentColor.B
 
     local function makeSlider(y, labelColor, labelText, initialVal)
-        local lbl = Utility.Label({ Text = labelText .. ": " .. math.floor(initialVal * 255), Color = Theme.TextSecondary, Size = 11, FrameSize = UDim2.new(0, 60, 0, 20), Position = UDim2.new(0, 10, 0, y), Parent = pickerFrame })
-        local track = Utility.Frame({ Color = labelColor, Size = UDim2.new(1, -80, 0, 4), Position = UDim2.new(0, 70, 0, y + 8), Parent = pickerFrame })
+        local lbl = Utility.Label({ Text = labelText .. ": " .. math.floor(initialVal * 255), Color = Theme.TextSecondary, Size = 11, FrameSize = UDim2.new(0, 60, 0, 20), Position = UDim2.new(0, 10, 0, y), Parent = container })
+        local track = Utility.Frame({ Color = labelColor, Size = UDim2.new(1, -80, 0, 4), Position = UDim2.new(0, 70, 0, y + 8), Parent = container })
         Utility.Corner(track)
         local fill = Utility.Frame({ Color = Color3.fromRGB(255,255,255), Size = UDim2.new(initialVal, 0, 1, 0), Parent = track })
         Utility.Corner(fill)
@@ -395,10 +397,10 @@ local function CreateRGBPicker(parent, currentColor, callback)
     end
 
     local red = makeSlider(8, Color3.fromRGB(255,0,0), "Red", r)
-    local green = makeSlider(36, Color3.fromRGB(0,255,0), "Green", g)
-    local blue = makeSlider(64, Color3.fromRGB(0,0,255), "Blue", b)
+    local green = makeSlider(38, Color3.fromRGB(0,255,0), "Green", g)
+    local blue = makeSlider(68, Color3.fromRGB(0,0,255), "Blue", b)
 
-    local preview = Utility.Frame({ Name = "Preview", Color = currentColor, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -40, 0.5, -15), Parent = pickerFrame })
+    local preview = Utility.Frame({ Name = "Preview", Color = currentColor, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -40, 0.5, -15), Parent = container })
     Utility.Corner(preview, UDim.new(0, 6))
 
     local dragging = { r = false, g = false, b = false }
@@ -451,7 +453,7 @@ local function CreateRGBPicker(parent, currentColor, callback)
         end
     end)
 
-    return pickerFrame
+    return container
 end
 
 -- ============================================================
@@ -467,7 +469,7 @@ function NexusLib:CreateWindow(opts)
     local subtitle = opts.Subtitle or "v1.0"
     local size = opts.Size or UDim2.new(0, 580, 0, 520)
     local configName = opts.ConfigName
-    local gameName = opts.GameName or "Game"  -- Personnalisable
+    local gameName = opts.GameName or "Game"
 
     local savedConfig = {}
     if configName and type(configName) == "string" then
@@ -511,8 +513,8 @@ function NexusLib:CreateWindow(opts)
     local titleLabel = Utility.Label({ Text = title, Font = Theme.FontBold, Size = 17, FrameSize = UDim2.new(0, 200, 0, 24), Position = UDim2.new(0, 28, 0, 10), Parent = topBar })
     local subtitleLabel = Utility.Label({ Text = subtitle, Color = Theme.SubtitleColor, Size = 11, FrameSize = UDim2.new(0, 200, 0, 18), Position = UDim2.new(0, 28, 0, 34), Parent = topBar })
 
-    -- Window controls
-    local btnGroup = Utility.Frame({ Name = "BtnGroup", Color = Color3.fromRGB(0,0,0), Size = UDim2.new(0, 100, 0, 34), Position = UDim2.new(1, -118, 0.5, -17), Parent = topBar })
+    -- Window controls (bien alignés à droite)
+    local btnGroup = Utility.Frame({ Name = "BtnGroup", Color = Color3.fromRGB(0,0,0), Size = UDim2.new(0, 100, 0, 34), Position = UDim2.new(1, -110, 0.5, -17), Parent = topBar })
     btnGroup.BackgroundTransparency = 1
 
     local minimized = false
@@ -1035,12 +1037,11 @@ function NexusLib:CreateWindow(opts)
             local callback = opts.Callback or function() end
             local saveKey = opts.SaveKey
 
-            -- wrap avec hauteur dynamique : on va ajuster la hauteur quand RGB s'ouvre
             local wrap = MakeWrapper(44)
-            wrap.ClipsDescendants = false  -- pour que le picker dépasse si besoin, mais on va le gérer
+            wrap.ClipsDescendants = false  -- pour que le container RGB puisse dépasser
             Utility.Label({ Text = name, FrameSize = UDim2.new(1, -170, 1, 0), Position = UDim2.new(0, 14, 0, 0), Parent = wrap })
 
-            -- Swatches horizontales avec ScrollFrame pour éviter les dépassements
+            -- Swatches horizontales (scrollable)
             local swatchScroll = Instance.new("ScrollingFrame")
             swatchScroll.Name = "SwatchScroll"
             swatchScroll.Size = UDim2.new(0, 170, 0, 28)
@@ -1085,29 +1086,23 @@ function NexusLib:CreateWindow(opts)
                         cfg[saveKey] = { r = col.R, g = col.G, b = col.B }
                         Configs.Save(configName, cfg)
                     end
-                    if rgbPicker then rgbPicker.Visible = false end
-                    -- Réduire la hauteur du wrap si le picker était ouvert
-                    if rgbPicker and rgbPicker.Visible then
-                        rgbPicker.Visible = false
-                        wrap.Size = UDim2.new(1, 0, 0, 44)
-                    end
+                    if rgbContainer then rgbContainer.Visible = false end
                 end)
             end
 
             local rgbBtn = Utility.Button({ Name = "RGBBtn", Text = "RGB", Color = Theme.TextPrimary, BgColor = Theme.ButtonBg, FrameSize = UDim2.new(0, 40, 0, 22), Position = UDim2.new(1, -40, 0, 0), Parent = swatchScroll })
             Utility.Corner(rgbBtn, UDim.new(0, 6))
 
-            local rgbPicker = nil
-            local rgbPickerVisible = false
+            local rgbContainer = nil
+            local rgbVisible = false
 
             rgbBtn.MouseButton1Click:Connect(function()
-                if rgbPickerVisible then
-                    if rgbPicker then rgbPicker.Visible = false end
-                    rgbPickerVisible = false
-                    wrap.Size = UDim2.new(1, 0, 0, 44)  -- hauteur normale
+                if rgbVisible then
+                    if rgbContainer then rgbContainer.Visible = false end
+                    rgbVisible = false
                 else
-                    if not rgbPicker then
-                        rgbPicker = CreateRGBPicker(wrap, currentColor, function(color)
+                    if not rgbContainer then
+                        rgbContainer = CreateRGBPicker(wrap, currentColor, function(color)
                             currentColor = color
                             pcall(callback, color)
                             if saveKey and configName then
@@ -1116,12 +1111,9 @@ function NexusLib:CreateWindow(opts)
                                 Configs.Save(configName, cfg)
                             end
                         end)
-                        rgbPicker.Position = UDim2.new(0, 14, 1, 4)
-                        rgbPicker.Size = UDim2.new(1, -28, 0, 100)
                     end
-                    rgbPicker.Visible = true
-                    rgbPickerVisible = true
-                    wrap.Size = UDim2.new(1, 0, 0, 148)  -- agrandir le wrap pour accueillir le picker
+                    rgbContainer.Visible = true
+                    rgbVisible = true
                 end
             end)
 
