@@ -1,6 +1,6 @@
 --[[
     NexusLib v1.0 — UI Library for Roblox Scripts
-    RGB picker always visible below swatches
+    RGB picker always visible, integrated in the flow
 ]]
 
 -- ============================================================
@@ -368,7 +368,7 @@ local function CreatePlayerProfile(parent)
 end
 
 -- ============================================================
--- RGB COLOR PICKER (always visible content)
+-- RGB COLOR PICKER (content only, no wrapper)
 -- ============================================================
 
 local function CreateRGBPickerContent(parent, currentColor, callback)
@@ -1036,17 +1036,17 @@ function NexusLib:CreateWindow(opts)
             local callback = opts.Callback or function() end
             local saveKey = opts.SaveKey
 
-            -- Hauteur fixe : ligne du nom (44) + swatches (30) + RGB picker (110) + marges = 44+30+110+8 = 192
-            local wrap = MakeWrapper(44 + 30 + 110 + 8)
+            -- Hauteur totale : ligne du nom (44) + espace swatches (30) + RGB picker (110) + marges = 190
+            local wrap = MakeWrapper(190)
             
-            -- Label
+            -- Label (Y=0)
             Utility.Label({ Text = name, FrameSize = UDim2.new(1, -170, 1, 0), Position = UDim2.new(0, 14, 0, 0), Parent = wrap })
 
-            -- Swatches horizontales (scrollable)
+            -- Swatches horizontales (Y=14 à 42)
             local swatchScroll = Instance.new("ScrollingFrame")
             swatchScroll.Name = "SwatchScroll"
             swatchScroll.Size = UDim2.new(0, 170, 0, 28)
-            swatchScroll.Position = UDim2.new(1, -180, 0.5, -14)
+            swatchScroll.Position = UDim2.new(1, -180, 0.5, -14)  -- centré verticalement dans la zone swatch
             swatchScroll.BackgroundTransparency = 1
             swatchScroll.BorderSizePixel = 0
             swatchScroll.ScrollBarThickness = 0
@@ -1076,7 +1076,6 @@ function NexusLib:CreateWindow(opts)
                 currentColor = Color3.new(s.r, s.g, s.b)
             end
 
-            -- Création des boutons prédéfinis
             for _, col in ipairs(presets) do
                 local sw = Utility.Button({ Name = "Swatch", Text = "", BgColor = col, FrameSize = UDim2.new(0, 22, 0, 22), Parent = swatchScroll })
                 Utility.Corner(sw, UDim.new(0, 6))
@@ -1088,7 +1087,7 @@ function NexusLib:CreateWindow(opts)
                         cfg[saveKey] = { r = col.R, g = col.G, b = col.B }
                         Configs.Save(configName, cfg)
                     end
-                    -- Mettre à jour le container RGB
+                    -- Mettre à jour le conteneur RGB
                     if rgbContainer then
                         rgbContainer:Destroy()
                         rgbContainer = CreateRGBPickerContent(wrap, currentColor, function(color)
@@ -1105,7 +1104,7 @@ function NexusLib:CreateWindow(opts)
                 end)
             end
 
-            -- Container RGB (toujours visible)
+            -- Conteneur RGB (toujours visible, positionné à Y=44)
             local rgbContainer = CreateRGBPickerContent(wrap, currentColor, function(color)
                 currentColor = color
                 pcall(callback, color)
@@ -1115,7 +1114,7 @@ function NexusLib:CreateWindow(opts)
                     Configs.Save(configName, cfg)
                 end
             end)
-            rgbContainer.Position = UDim2.new(0, 14, 0, 44)  -- juste sous les swatches
+            rgbContainer.Position = UDim2.new(0, 14, 0, 44)
 
             local cpObj = {}
             function cpObj:Get() return currentColor end
