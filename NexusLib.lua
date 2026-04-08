@@ -19,36 +19,38 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse       = LocalPlayer:GetMouse()
 
 -- ============================================================
--- CONFIGURATION SYSTEM
+-- CONFIGURATION SYSTEM (avec gestion d'erreur)
 -- ============================================================
 
 local Configs = {}
 local ConfigFolder = "AetherX"
 
--- Create folder if not exists
-if not isfolder then
-    -- For executors that don't support isfolder, we'll use pcall
-    pcall(function()
+-- Vérifier si les fonctions de fichier existent
+local hasFileFunctions = pcall(function()
+    return isfolder and makefolder and readfile and writefile
+end)
+
+local function ensureFolder()
+    if not hasFileFunctions then return false end
+    local success = pcall(function()
         if not isfolder(ConfigFolder) then
             makefolder(ConfigFolder)
         end
     end)
-else
-    if not isfolder(ConfigFolder) then
-        makefolder(ConfigFolder)
-    end
+    return success
 end
 
 function Configs:Load(configName)
+    if not configName or type(configName) ~= "string" then return {} end
+    if not hasFileFunctions then return {} end
+    
+    ensureFolder()
     local filePath = ConfigFolder .. "/" .. configName .. ".json"
-    local success, data = pcall(function()
-        return readfile(filePath)
-    end)
-    if success and data then
-        local success2, decoded = pcall(function()
-            return HttpService:JSONDecode(data)
-        end)
-        if success2 then
+    
+    local success, data = pcall(readfile, filePath)
+    if success and data and data ~= "" then
+        local success2, decoded = pcall(HttpService.JSONDecode, HttpService, data)
+        if success2 and decoded then
             return decoded
         end
     end
@@ -56,14 +58,15 @@ function Configs:Load(configName)
 end
 
 function Configs:Save(configName, data)
+    if not configName or type(configName) ~= "string" then return end
+    if not hasFileFunctions then return end
+    
+    ensureFolder()
     local filePath = ConfigFolder .. "/" .. configName .. ".json"
-    local success, encoded = pcall(function()
-        return HttpService:JSONEncode(data)
-    end)
-    if success then
-        pcall(function()
-            writefile(filePath, encoded)
-        end)
+    
+    local success, encoded = pcall(HttpService.JSONEncode, HttpService, data)
+    if success and encoded then
+        pcall(writefile, filePath, encoded)
     end
 end
 
@@ -72,60 +75,41 @@ end
 -- ============================================================
 
 local DefaultTheme = {
-    -- Window
     Background    = Color3.fromRGB(15, 15, 20),
     TopBar        = Color3.fromRGB(20, 20, 28),
     Border        = Color3.fromRGB(50, 50, 70),
     Accent        = Color3.fromRGB(100, 80, 255),
     AccentDark    = Color3.fromRGB(70, 55, 180),
-
-    -- Tabs
     TabActive     = Color3.fromRGB(100, 80, 255),
     TabInactive   = Color3.fromRGB(30, 30, 42),
     TabText       = Color3.fromRGB(255, 255, 255),
     TabTextOff    = Color3.fromRGB(140, 140, 160),
-
-    -- Elements
     ElementBg     = Color3.fromRGB(22, 22, 32),
     ElementHover  = Color3.fromRGB(30, 30, 45),
     ElementBorder = Color3.fromRGB(45, 45, 65),
-
-    -- Text
     TextPrimary   = Color3.fromRGB(240, 240, 255),
     TextSecondary = Color3.fromRGB(150, 150, 175),
     TextDisabled  = Color3.fromRGB(80, 80, 100),
     TitleColor    = Color3.fromRGB(255, 255, 255),
     SubtitleColor = Color3.fromRGB(150, 150, 175),
-
-    -- Toggle
     ToggleOn      = Color3.fromRGB(100, 80, 255),
     ToggleOff     = Color3.fromRGB(45, 45, 65),
     ToggleKnob    = Color3.fromRGB(255, 255, 255),
-
-    -- Slider
     SliderFill    = Color3.fromRGB(100, 80, 255),
     SliderBg      = Color3.fromRGB(40, 40, 58),
     SliderKnob    = Color3.fromRGB(255, 255, 255),
-
-    -- Dropdown
     DropdownBg    = Color3.fromRGB(18, 18, 26),
     DropdownItem  = Color3.fromRGB(25, 25, 36),
     DropdownHover = Color3.fromRGB(35, 35, 52),
-
-    -- Button
     ButtonBg      = Color3.fromRGB(35, 35, 45),
     ButtonHover   = Color3.fromRGB(45, 45, 60),
     ButtonBorder  = Color3.fromRGB(60, 60, 80),
     ButtonText    = Color3.fromRGB(240, 240, 255),
-
-    -- Notify
     NotifyBg      = Color3.fromRGB(20, 20, 30),
     NotifyBorder  = Color3.fromRGB(100, 80, 255),
     NotifySuccess = Color3.fromRGB(60, 200, 120),
     NotifyWarning = Color3.fromRGB(230, 180, 50),
     NotifyError   = Color3.fromRGB(220, 70, 70),
-
-    -- Sizes
     CornerRadius  = UDim.new(0, 6),
     Font          = Enum.Font.GothamMedium,
     FontBold      = Enum.Font.GothamBold,
@@ -135,7 +119,6 @@ local DefaultTheme = {
 local Theme = {}
 for k, v in pairs(DefaultTheme) do Theme[k] = v end
 
--- Theme update function
 local ThemeCallbacks = {}
 
 local function UpdateTheme(newTheme)
@@ -422,8 +405,6 @@ local function CreatePlayerProfile(parent)
     local userId = LocalPlayer.UserId
     local thumbnailUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=150&height=150&format=png"
     avatarImage.Image = thumbnailUrl
-    
-    -- Fallback in case image fails to load
     avatarImage.ImageTransparency = 0
     
     -- Player name
@@ -698,12 +679,12 @@ function NexusLib:CreateWindow(opts)
     local size     = opts.Size     or UDim2.new(0, 580, 0, 520)
     local configName = opts.ConfigName
     
-    -- Load saved config if exists
+    -- Load saved config if exists (avec vérification)
     local savedConfig = {}
-    if configName then
-        savedConfig = Configs.Load(configName)
-        if savedConfig.Theme then
-            UpdateTheme(savedConfig.Theme)
+    if configName and type(configName) == "string" then
+        local success, result = pcall(Configs.Load, Configs, configName)
+        if success and result then
+            savedConfig = result
         end
     end
     
@@ -952,7 +933,7 @@ function NexusLib:CreateWindow(opts)
     
     -- Save config function
     local function saveConfig()
-        if not configName then return end
+        if not configName or type(configName) ~= "string" then return end
         local configToSave = {
             Theme = {
                 Accent = Theme.Accent,
@@ -970,7 +951,7 @@ function NexusLib:CreateWindow(opts)
                 ButtonText = Theme.ButtonText,
             }
         }
-        Configs.Save(configName, configToSave)
+        pcall(Configs.Save, Configs, configName, configToSave)
     end
 
     function WindowObj:AddTab(name, icon)
@@ -1591,7 +1572,8 @@ function NexusLib:CreateWindow(opts)
 
             -- Load saved value
             if saveKey and configName and savedConfig[saveKey] then
-                currentKey = Enum.KeyCode[savedConfig[saveKey]] or default
+                local keyName = savedConfig[saveKey]
+                currentKey = Enum.KeyCode[keyName] or default
                 keyBtn.Text = "[" .. currentKey.Name .. "]"
             end
 
@@ -1645,14 +1627,14 @@ function NexusLib:CreateWindow(opts)
             })
 
             local presets = {
-                Color3.fromRGB(100, 80, 255),  -- Purple
-                Color3.fromRGB(255, 80, 80),   -- Red
-                Color3.fromRGB(80, 180, 255),  -- Blue
-                Color3.fromRGB(80, 230, 120),  -- Green
-                Color3.fromRGB(255, 200, 50),  -- Yellow
-                Color3.fromRGB(200, 80, 255),  -- Pink
-                Color3.fromRGB(255, 140, 80),  -- Orange
-                Color3.fromRGB(80, 200, 200),  -- Cyan
+                Color3.fromRGB(100, 80, 255),
+                Color3.fromRGB(255, 80, 80),
+                Color3.fromRGB(80, 180, 255),
+                Color3.fromRGB(80, 230, 120),
+                Color3.fromRGB(255, 200, 50),
+                Color3.fromRGB(200, 80, 255),
+                Color3.fromRGB(255, 140, 80),
+                Color3.fromRGB(80, 200, 200),
             }
 
             local currentColor = default
@@ -1663,7 +1645,9 @@ function NexusLib:CreateWindow(opts)
             -- Load saved value
             if saveKey and configName and savedConfig[saveKey] then
                 local saved = savedConfig[saveKey]
-                currentColor = Color3.new(saved.r, saved.g, saved.b)
+                if saved and saved.r then
+                    currentColor = Color3.new(saved.r, saved.g, saved.b)
+                end
             end
 
             local swatchHolder = Utility.Frame({
