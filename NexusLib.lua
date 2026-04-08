@@ -18,15 +18,15 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse       = LocalPlayer:GetMouse()
 
 -- ============================================================
--- THEME (Customisable)
+-- DEFAULT THEME
 -- ============================================================
 
-local Theme = {
+local DefaultTheme = {
     -- Window
     Background    = Color3.fromRGB(15, 15, 20),
     TopBar        = Color3.fromRGB(20, 20, 28),
     Border        = Color3.fromRGB(50, 50, 70),
-    Accent        = Color3.fromRGB(100, 80, 255),   -- Primary accent color
+    Accent        = Color3.fromRGB(100, 80, 255),
     AccentDark    = Color3.fromRGB(70, 55, 180),
 
     -- Tabs
@@ -79,13 +79,25 @@ local Theme = {
     FontSize      = 13,
 }
 
--- Function to modify theme colors
-local function SetTheme(newTheme)
+local Theme = {}
+for k, v in pairs(DefaultTheme) do Theme[k] = v end
+
+-- Theme update function
+local ThemeCallbacks = {}
+
+local function UpdateTheme(newTheme)
     for k, v in pairs(newTheme) do
         if Theme[k] then
             Theme[k] = v
         end
     end
+    for _, callback in ipairs(ThemeCallbacks) do
+        pcall(callback, Theme)
+    end
+end
+
+local function OnThemeChange(callback)
+    table.insert(ThemeCallbacks, callback)
 end
 
 -- ============================================================
@@ -330,68 +342,6 @@ local function Notify(opts)
 end
 
 -- ============================================================
--- PLAYER INFO DISPLAY
--- ============================================================
-
-local PlayerInfoFrame = nil
-
-local function CreatePlayerInfo(screenGui)
-    PlayerInfoFrame = Utility.Frame({
-        Name     = "PlayerInfo",
-        Color    = Theme.TopBar,
-        Size     = UDim2.new(0, 200, 0, 36),
-        Position = UDim2.new(1, -210, 1, -46),
-        Parent   = screenGui,
-    })
-    PlayerInfoFrame.BackgroundTransparency = 0.85
-    Utility.Corner(PlayerInfoFrame, UDim.new(0, 8))
-    Utility.Stroke(PlayerInfoFrame, Theme.ElementBorder, 1)
-    
-    local avatarIcon = Utility.Frame({
-        Name     = "AvatarIcon",
-        Color    = Theme.Accent,
-        Size     = UDim2.new(0, 24, 0, 24),
-        Position = UDim2.new(0, 8, 0.5, -12),
-        Parent   = PlayerInfoFrame,
-    })
-    Utility.Corner(avatarIcon, UDim.new(0, 6))
-    
-    local playerName = Utility.Label({
-        Text      = LocalPlayer.Name,
-        Color     = Theme.TextPrimary,
-        Font      = Theme.FontBold,
-        Size      = 12,
-        FrameSize = UDim2.new(1, -70, 0, 18),
-        Position  = UDim2.new(0, 40, 0, 4),
-        Parent    = PlayerInfoFrame,
-    })
-    
-    local playerStatus = Utility.Label({
-        Text      = "Online",
-        Color     = Theme.NotifySuccess,
-        Size      = 10,
-        FrameSize = UDim2.new(1, -70, 0, 14),
-        Position  = UDim2.new(0, 40, 0, 20),
-        Parent    = PlayerInfoFrame,
-    })
-    
-    local pingIcon = Utility.Frame({
-        Name     = "PingIcon",
-        Color    = Theme.NotifySuccess,
-        Size     = UDim2.new(0, 6, 0, 6),
-        Position = UDim2.new(1, -20, 0.5, -3),
-        Parent   = PlayerInfoFrame,
-    })
-    Utility.Corner(pingIcon, UDim.new(0, 3))
-    
-    -- Animation d'entrée
-    PlayerInfoFrame.Position = UDim2.new(1, -210, 1, 10)
-    Utility.Tween(PlayerInfoFrame, { Position = UDim2.new(1, -210, 1, -46) }, 0.4)
-    
-    return PlayerInfoFrame
-end
-
--- ============================================================
 -- NEXUSLIB CORE
 -- ============================================================
 
@@ -402,20 +352,10 @@ function NexusLib:CreateWindow(opts)
     opts = opts or {}
     local title    = opts.Title    or "NexusLib"
     local subtitle = opts.Subtitle or "v1.0"
-    local size     = opts.Size     or UDim2.new(0, 520, 0, 420)
-    local accentColor = opts.AccentColor or Theme.Accent
+    local size     = opts.Size     or UDim2.new(0, 540, 0, 440)
     
-    -- Update accent colors if provided
     if opts.AccentColor then
-        Theme.Accent = opts.AccentColor
-        Theme.AccentDark = Color3.new(
-            opts.AccentColor.R * 0.7,
-            opts.AccentColor.G * 0.7,
-            opts.AccentColor.B * 0.7
-        )
-        Theme.TabActive = opts.AccentColor
-        Theme.ToggleOn = opts.AccentColor
-        Theme.SliderFill = opts.AccentColor
+        UpdateTheme({ Accent = opts.AccentColor, TabActive = opts.AccentColor, ToggleOn = opts.AccentColor, SliderFill = opts.AccentColor })
     end
 
     local screenGui = Instance.new("ScreenGui")
@@ -426,7 +366,6 @@ function NexusLib:CreateWindow(opts)
     screenGui.Parent           = LocalPlayer:WaitForChild("PlayerGui")
 
     InitNotifications(screenGui)
-    CreatePlayerInfo(screenGui)
 
     local window = Utility.Frame({
         Name     = "Window",
@@ -450,106 +389,145 @@ function NexusLib:CreateWindow(opts)
     shadow.ZIndex = 0
     Utility.Corner(shadow, UDim.new(0, 14))
 
+    -- Top bar
     local topBar = Utility.Frame({
         Name   = "TopBar",
         Color  = Theme.TopBar,
-        Size   = UDim2.new(1, 0, 0, 44),
+        Size   = UDim2.new(1, 0, 0, 50),
         Parent = window,
     })
 
+    -- Accent line
     local accentLine = Utility.Frame({
         Name     = "AccentLine",
         Color    = Theme.Accent,
-        Size     = UDim2.new(1, 0, 0, 1),
-        Position = UDim2.new(0, 0, 0, 44),
+        Size     = UDim2.new(1, 0, 0, 2),
+        Position = UDim2.new(0, 0, 0, 50),
         Parent   = window,
     })
 
-    -- Logo/Demo text
+    -- Logo accent
     local logoFrame = Utility.Frame({
         Name     = "LogoFrame",
         Color    = Theme.Accent,
-        Size     = UDim2.new(0, 4, 0, 22),
-        Position = UDim2.new(0, 14, 0.5, -11),
+        Size     = UDim2.new(0, 4, 0, 24),
+        Position = UDim2.new(0, 14, 0.5, -12),
         Parent   = topBar,
     })
     Utility.Corner(logoFrame, UDim.new(0, 2))
 
-    Utility.Label({
+    -- Title
+    local titleLabel = Utility.Label({
         Text      = title,
         Font      = Theme.FontBold,
-        Size      = 15,
-        FrameSize = UDim2.new(0, 200, 0, 22),
-        Position  = UDim2.new(0, 24, 0.5, -11),
+        Size      = 16,
+        FrameSize = UDim2.new(0, 200, 0, 24),
+        Position  = UDim2.new(0, 24, 0.5, -12),
         Parent    = topBar,
     })
 
-    Utility.Label({
+    -- Subtitle (fixed position)
+    local subtitleLabel = Utility.Label({
         Text      = subtitle,
         Color     = Theme.TextSecondary,
         Size      = 11,
-        FrameSize = UDim2.new(0, 100, 0, 22),
-        Position  = UDim2.new(0, 24, 0.5, 9),
+        FrameSize = UDim2.new(0, 100, 0, 18),
+        Position  = UDim2.new(0, 24, 0.5, 8),
         Parent    = topBar,
     })
 
-    -- Window control buttons group
+    -- ============================================================
+    -- WINDOW CONTROLS (Refait)
+    -- ============================================================
+    
     local btnGroup = Utility.Frame({
         Name     = "BtnGroup",
         Color    = Color3.fromRGB(0,0,0),
-        Size     = UDim2.new(0, 90, 0, 28),
-        Position = UDim2.new(1, -100, 0.5, -14),
+        Size     = UDim2.new(0, 100, 0, 32),
+        Position = UDim2.new(1, -110, 0.5, -16),
         Parent   = topBar,
     })
     btnGroup.BackgroundTransparency = 1
 
-    -- Minimize button with icon
+    -- Minimize button with animated icon
     local minimized = false
     local normalSize = size
     local minBtn = Utility.Button({
         Name      = "MinBtn",
-        Text      = "─",
+        Text      = "−",
         Color     = Theme.TextSecondary,
         BgColor   = Color3.fromRGB(25, 25, 35),
-        FrameSize = UDim2.new(0, 28, 0, 28),
+        FrameSize = UDim2.new(0, 32, 0, 32),
         Position  = UDim2.new(0, 0, 0, 0),
         Parent    = btnGroup,
     })
-    Utility.Corner(minBtn, UDim.new(0, 6))
+    minBtn.TextSize = 20
+    Utility.Corner(minBtn, UDim.new(0, 8))
+
+    local minGlow = Utility.Frame({
+        Name     = "Glow",
+        Color    = Theme.Accent,
+        Size     = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        Parent   = minBtn,
+    })
+    minGlow.BackgroundTransparency = 0.85
+    Utility.Corner(minGlow, UDim.new(0, 8))
 
     minBtn.MouseEnter:Connect(function()
-        Utility.Tween(minBtn, { BackgroundColor3 = Theme.ElementHover, TextColor3 = Theme.Accent }, 0.15)
+        Utility.Tween(minBtn, { BackgroundColor3 = Theme.ElementHover }, 0.15)
+        Utility.Tween(minBtn, { TextColor3 = Theme.Accent }, 0.15)
+        Utility.Tween(minGlow, { BackgroundTransparency = 0.7 }, 0.15)
     end)
     minBtn.MouseLeave:Connect(function()
-        Utility.Tween(minBtn, { BackgroundColor3 = Color3.fromRGB(25, 25, 35), TextColor3 = Theme.TextSecondary }, 0.15)
+        Utility.Tween(minBtn, { BackgroundColor3 = Color3.fromRGB(25, 25, 35) }, 0.15)
+        Utility.Tween(minBtn, { TextColor3 = Theme.TextSecondary }, 0.15)
+        Utility.Tween(minGlow, { BackgroundTransparency = 0.85 }, 0.15)
     end)
     minBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
             normalSize = window.Size
-            Utility.Tween(window, { Size = UDim2.new(0, window.Size.X.Offset, 0, 44) }, 0.25)
+            Utility.Tween(window, { Size = UDim2.new(0, window.Size.X.Offset, 0, 50) }, 0.25)
+            Utility.Tween(minBtn, { Text = "□" }, 0.1)
         else
             Utility.Tween(window, { Size = normalSize }, 0.25)
+            Utility.Tween(minBtn, { Text = "−" }, 0.1)
         end
     end)
 
-    -- Close button with icon
+    -- Close button with animated icon
     local closeBtn = Utility.Button({
         Name      = "CloseBtn",
         Text      = "✕",
         Color     = Theme.TextSecondary,
         BgColor   = Color3.fromRGB(25, 25, 35),
-        FrameSize = UDim2.new(0, 28, 0, 28),
-        Position  = UDim2.new(0, 31, 0, 0),
+        FrameSize = UDim2.new(0, 32, 0, 32),
+        Position  = UDim2.new(0, 36, 0, 0),
         Parent    = btnGroup,
     })
-    Utility.Corner(closeBtn, UDim.new(0, 6))
+    closeBtn.TextSize = 16
+    Utility.Corner(closeBtn, UDim.new(0, 8))
+
+    local closeGlow = Utility.Frame({
+        Name     = "Glow",
+        Color    = Color3.fromRGB(220, 70, 70),
+        Size     = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        Parent   = closeBtn,
+    })
+    closeGlow.BackgroundTransparency = 0.85
+    Utility.Corner(closeGlow, UDim.new(0, 8))
 
     closeBtn.MouseEnter:Connect(function()
-        Utility.Tween(closeBtn, { BackgroundColor3 = Color3.fromRGB(70, 30, 30), TextColor3 = Color3.fromRGB(220,70,70) }, 0.15)
+        Utility.Tween(closeBtn, { BackgroundColor3 = Color3.fromRGB(70, 30, 30) }, 0.15)
+        Utility.Tween(closeBtn, { TextColor3 = Color3.fromRGB(255, 100, 100) }, 0.15)
+        Utility.Tween(closeGlow, { BackgroundTransparency = 0.6 }, 0.15)
     end)
     closeBtn.MouseLeave:Connect(function()
-        Utility.Tween(closeBtn, { BackgroundColor3 = Color3.fromRGB(25, 25, 35), TextColor3 = Theme.TextSecondary }, 0.15)
+        Utility.Tween(closeBtn, { BackgroundColor3 = Color3.fromRGB(25, 25, 35) }, 0.15)
+        Utility.Tween(closeBtn, { TextColor3 = Theme.TextSecondary }, 0.15)
+        Utility.Tween(closeGlow, { BackgroundTransparency = 0.85 }, 0.15)
     end)
     closeBtn.MouseButton1Click:Connect(function()
         Utility.Tween(window, { Size = UDim2.new(0, window.Size.X.Offset, 0, 0) }, 0.25)
@@ -558,13 +536,59 @@ function NexusLib:CreateWindow(opts)
         end)
     end)
 
+    -- ============================================================
+    -- PLAYER INFO (Bottom left of window)
+    -- ============================================================
+    
+    local playerInfoFrame = Utility.Frame({
+        Name     = "PlayerInfo",
+        Color    = Theme.ElementBg,
+        Size     = UDim2.new(0, 180, 0, 38),
+        Position = UDim2.new(0, 12, 1, -46),
+        Parent   = window,
+    })
+    Utility.Corner(playerInfoFrame, UDim.new(0, 8))
+    Utility.Stroke(playerInfoFrame, Theme.ElementBorder, 1)
+    
+    local playerAvatar = Utility.Frame({
+        Name     = "Avatar",
+        Color    = Theme.Accent,
+        Size     = UDim2.new(0, 28, 0, 28),
+        Position = UDim2.new(0, 5, 0.5, -14),
+        Parent   = playerInfoFrame,
+    })
+    Utility.Corner(playerAvatar, UDim.new(0, 7))
+    
+    local playerNameLabel = Utility.Label({
+        Text      = LocalPlayer.Name,
+        Color     = Theme.TextPrimary,
+        Font      = Theme.FontBold,
+        Size      = 12,
+        FrameSize = UDim2.new(1, -70, 0, 18),
+        Position  = UDim2.new(0, 38, 0, 4),
+        Parent    = playerInfoFrame,
+    })
+    
+    local playerStatusLabel = Utility.Label({
+        Text      = "● Online",
+        Color     = Theme.NotifySuccess,
+        Size      = 10,
+        FrameSize = UDim2.new(1, -70, 0, 14),
+        Position  = UDim2.new(0, 38, 0, 20),
+        Parent    = playerInfoFrame,
+    })
+
     Utility.MakeDraggable(window, topBar)
 
+    -- ============================================================
+    -- TAB SYSTEM
+    -- ============================================================
+    
     local tabBar = Utility.Frame({
         Name     = "TabBar",
         Color    = Theme.TopBar,
-        Size     = UDim2.new(0, 150, 1, -45),
-        Position = UDim2.new(0, 0, 0, 45),
+        Size     = UDim2.new(0, 150, 1, -52),
+        Position = UDim2.new(0, 0, 0, 52),
         Parent   = window,
     })
 
@@ -588,15 +612,15 @@ function NexusLib:CreateWindow(opts)
     local tabList = Instance.new("UIListLayout")
     tabList.SortOrder          = Enum.SortOrder.LayoutOrder
     tabList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    tabList.Padding            = UDim.new(0, 3)
+    tabList.Padding            = UDim.new(0, 4)
     tabList.Parent             = tabScroll
-    Utility.Padding(tabScroll, 8, 8, 6, 6)
+    Utility.Padding(tabScroll, 10, 10, 8, 8)
 
     local contentArea = Utility.Frame({
         Name     = "ContentArea",
         Color    = Theme.Background,
-        Size     = UDim2.new(1, -150, 1, -45),
-        Position = UDim2.new(0, 150, 0, 45),
+        Size     = UDim2.new(1, -150, 1, -52),
+        Position = UDim2.new(0, 150, 0, 52),
         Parent   = window,
     })
 
@@ -614,12 +638,12 @@ function NexusLib:CreateWindow(opts)
             Color     = Theme.TabTextOff,
             BgColor   = Theme.TabInactive,
             Font      = Theme.Font,
-            FrameSize = UDim2.new(1, -10, 0, 32),
+            FrameSize = UDim2.new(1, -10, 0, 34),
             Parent    = tabScroll,
         })
         tabBtn.TextXAlignment = Enum.TextXAlignment.Left
-        Utility.Corner(tabBtn, UDim.new(0, 6))
-        Utility.Padding(tabBtn, 0, 0, 10, 0)
+        Utility.Corner(tabBtn, UDim.new(0, 8))
+        Utility.Padding(tabBtn, 0, 0, 12, 0)
 
         local tabContent = Utility.Frame({
             Name     = name .. "Content",
@@ -642,9 +666,9 @@ function NexusLib:CreateWindow(opts)
 
         local listLayout = Instance.new("UIListLayout")
         listLayout.SortOrder  = Enum.SortOrder.LayoutOrder
-        listLayout.Padding    = UDim.new(0, 6)
+        listLayout.Padding    = UDim.new(0, 8)
         listLayout.Parent     = scroll
-        Utility.Padding(scroll, 8, 8, 12, 12)
+        Utility.Padding(scroll, 12, 12, 16, 16)
 
         local function activateTab()
             if activeTab then
@@ -702,11 +726,11 @@ function NexusLib:CreateWindow(opts)
                 Color     = Theme.Accent,
                 Font      = Theme.FontBold,
                 Size      = 12,
-                FrameSize = UDim2.new(1, 0, 0, 22),
+                FrameSize = UDim2.new(1, 0, 0, 24),
                 Parent    = scroll,
             })
             sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-            Utility.Padding(sectionLabel, 0, 0, 4, 0)
+            Utility.Padding(sectionLabel, 0, 0, 6, 0)
         end
 
         function tabData:AddToggle(opts)
@@ -715,32 +739,32 @@ function NexusLib:CreateWindow(opts)
             local default  = opts.Default  or false
             local callback = opts.Callback or function() end
 
-            local wrap = MakeWrapper(40)
+            local wrap = MakeWrapper(42)
 
             Utility.Label({
                 Text      = name,
                 FrameSize = UDim2.new(1, -60, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
+                Position  = UDim2.new(0, 14, 0, 0),
                 Parent    = wrap,
             })
 
             local trackBg = Utility.Frame({
                 Name     = "TrackBg",
                 Color    = default and Theme.ToggleOn or Theme.ToggleOff,
-                Size     = UDim2.new(0, 38, 0, 20),
-                Position = UDim2.new(1, -50, 0.5, -10),
+                Size     = UDim2.new(0, 40, 0, 22),
+                Position = UDim2.new(1, -52, 0.5, -11),
                 Parent   = wrap,
             })
-            Utility.Corner(trackBg, UDim.new(0, 10))
+            Utility.Corner(trackBg, UDim.new(0, 11))
 
             local knob = Utility.Frame({
                 Name     = "Knob",
                 Color    = Theme.ToggleKnob,
-                Size     = UDim2.new(0, 14, 0, 14),
-                Position = default and UDim2.new(0, 21, 0.5, -7) or UDim2.new(0, 3, 0.5, -7),
+                Size     = UDim2.new(0, 16, 0, 16),
+                Position = default and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 3, 0.5, -8),
                 Parent   = trackBg,
             })
-            Utility.Corner(knob, UDim.new(0, 7))
+            Utility.Corner(knob, UDim.new(0, 8))
 
             local toggled = default
             local togObj  = {}
@@ -749,7 +773,7 @@ function NexusLib:CreateWindow(opts)
                 toggled = val
                 Utility.Tween(trackBg, { BackgroundColor3 = toggled and Theme.ToggleOn or Theme.ToggleOff }, 0.2)
                 Utility.Tween(knob, {
-                    Position = toggled and UDim2.new(0, 21, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+                    Position = toggled and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
                 }, 0.2)
                 pcall(callback, toggled)
             end
@@ -778,14 +802,14 @@ function NexusLib:CreateWindow(opts)
             local callback = opts.Callback or function() end
             local desc     = opts.Description
 
-            local height = desc and 52 or 40
+            local height = desc and 56 or 44
             local wrap   = MakeWrapper(height)
 
             Utility.Label({
                 Text      = name,
                 Font      = Theme.FontBold,
                 FrameSize = UDim2.new(1, -110, 0, 24),
-                Position  = UDim2.new(0, 12, 0, desc and 8 or 8),
+                Position  = UDim2.new(0, 14, 0, desc and 10 or 10),
                 Parent    = wrap,
             })
 
@@ -795,18 +819,18 @@ function NexusLib:CreateWindow(opts)
                     Color     = Theme.TextSecondary,
                     Size      = 11,
                     FrameSize = UDim2.new(1, -110, 0, 16),
-                    Position  = UDim2.new(0, 12, 0, 30),
+                    Position  = UDim2.new(0, 14, 0, 34),
                     Parent    = wrap,
                 })
             end
 
             local btn = Utility.Button({
                 Name      = "Btn",
-                Text      = "→",
+                Text      = "▶",
                 Color     = Theme.TextPrimary,
                 BgColor   = Theme.ButtonBg,
-                FrameSize = UDim2.new(0, 36, 0, 26),
-                Position  = UDim2.new(1, -46, 0.5, -13),
+                FrameSize = UDim2.new(0, 38, 0, 28),
+                Position  = UDim2.new(1, -48, 0.5, -14),
                 Parent    = wrap,
             })
             Utility.Corner(btn)
@@ -814,11 +838,11 @@ function NexusLib:CreateWindow(opts)
 
             btn.MouseEnter:Connect(function()
                 Utility.Tween(btn, { BackgroundColor3 = Theme.ButtonHover }, 0.1)
-                Utility.Tween(btn, { Text = "▶" }, 0.1)
+                Utility.Tween(btn, { Text = "►" }, 0.1)
             end)
             btn.MouseLeave:Connect(function()
                 Utility.Tween(btn, { BackgroundColor3 = Theme.ButtonBg }, 0.1)
-                Utility.Tween(btn, { Text = "→" }, 0.1)
+                Utility.Tween(btn, { Text = "▶" }, 0.1)
             end)
             btn.MouseButton1Click:Connect(function()
                 Utility.Tween(btn, { BackgroundColor3 = Theme.Accent }, 0.1)
@@ -844,12 +868,12 @@ function NexusLib:CreateWindow(opts)
             local suffix   = opts.Suffix   or ""
             local callback = opts.Callback or function() end
 
-            local wrap = MakeWrapper(56)
+            local wrap = MakeWrapper(60)
 
             local nameLabel = Utility.Label({
                 Text      = name,
                 FrameSize = UDim2.new(1, -80, 0, 20),
-                Position  = UDim2.new(0, 12, 0, 8),
+                Position  = UDim2.new(0, 14, 0, 8),
                 Parent    = wrap,
             })
 
@@ -859,15 +883,15 @@ function NexusLib:CreateWindow(opts)
                 Font      = Theme.FontBold,
                 Align     = Enum.TextXAlignment.Right,
                 FrameSize = UDim2.new(0, 70, 0, 20),
-                Position  = UDim2.new(1, -80, 0, 8),
+                Position  = UDim2.new(1, -84, 0, 8),
                 Parent    = wrap,
             })
 
             local trackBg = Utility.Frame({
                 Name     = "TrackBg",
                 Color    = Theme.SliderBg,
-                Size     = UDim2.new(1, -24, 0, 6),
-                Position = UDim2.new(0, 12, 0, 38),
+                Size     = UDim2.new(1, -28, 0, 6),
+                Position = UDim2.new(0, 14, 0, 42),
                 Parent   = wrap,
             })
             Utility.Corner(trackBg, UDim.new(0, 3))
@@ -883,11 +907,11 @@ function NexusLib:CreateWindow(opts)
             local knob = Utility.Frame({
                 Name     = "Knob",
                 Color    = Theme.SliderKnob,
-                Size     = UDim2.new(0, 14, 0, 14),
-                Position = UDim2.new((default - min) / (max - min), -7, 0.5, -7),
+                Size     = UDim2.new(0, 16, 0, 16),
+                Position = UDim2.new((default - min) / (max - min), -8, 0.5, -8),
                 Parent   = trackBg,
             })
-            Utility.Corner(knob, UDim.new(0, 7))
+            Utility.Corner(knob, UDim.new(0, 8))
 
             local sliderObj = {}
             local currentVal = default
@@ -898,7 +922,7 @@ function NexusLib:CreateWindow(opts)
                 currentVal = val
                 local pct = (val - min) / (max - min)
                 Utility.Tween(fill,  { Size     = UDim2.new(pct, 0, 1, 0) }, 0.05)
-                Utility.Tween(knob,  { Position = UDim2.new(pct, -7, 0.5, -7) }, 0.05)
+                Utility.Tween(knob,  { Position = UDim2.new(pct, -8, 0.5, -8) }, 0.05)
                 valLabel.Text = tostring(val) .. suffix
                 pcall(callback, val)
             end
@@ -950,14 +974,14 @@ function NexusLib:CreateWindow(opts)
             local default  = opts.Default  or list[1]
             local callback = opts.Callback or function() end
 
-            local wrap = MakeWrapper(40)
+            local wrap = MakeWrapper(42)
             wrap.ClipsDescendants = false
             wrap.ZIndex = 5
 
             Utility.Label({
                 Text      = name,
                 FrameSize = UDim2.new(1, -150, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
+                Position  = UDim2.new(0, 14, 0, 0),
                 Parent    = wrap,
             })
 
@@ -966,19 +990,19 @@ function NexusLib:CreateWindow(opts)
                 Text      = default or "Select...",
                 Color     = Theme.TextSecondary,
                 BgColor   = Theme.DropdownBg,
-                FrameSize = UDim2.new(0, 120, 0, 28),
-                Position  = UDim2.new(1, -130, 0.5, -14),
+                FrameSize = UDim2.new(0, 130, 0, 30),
+                Position  = UDim2.new(1, -140, 0.5, -15),
                 Parent    = wrap,
             })
             dropBtn.TextXAlignment = Enum.TextXAlignment.Left
             Utility.Corner(dropBtn)
             Utility.Stroke(dropBtn, Theme.ElementBorder, 1)
-            Utility.Padding(dropBtn, 0, 0, 8, 0)
+            Utility.Padding(dropBtn, 0, 0, 10, 0)
 
             local arrow = Utility.Label({
-                Text      = "▾",
+                Text      = "▼",
                 Color     = Theme.TextSecondary,
-                Size      = 11,
+                Size      = 10,
                 Align     = Enum.TextXAlignment.Right,
                 FrameSize = UDim2.new(1, -8, 1, 0),
                 Parent    = dropBtn,
@@ -987,8 +1011,8 @@ function NexusLib:CreateWindow(opts)
             local dropList = Utility.Frame({
                 Name     = "DropList",
                 Color    = Theme.DropdownBg,
-                Size     = UDim2.new(0, 120, 0, 0),
-                Position = UDim2.new(1, -130, 1, 4),
+                Size     = UDim2.new(0, 130, 0, 0),
+                Position = UDim2.new(1, -140, 1, 4),
                 Parent   = wrap,
             })
             dropList.Visible         = false
@@ -1007,7 +1031,7 @@ function NexusLib:CreateWindow(opts)
 
             local function closeDropdown()
                 open = false
-                Utility.Tween(dropList, { Size = UDim2.new(0, 120, 0, 0) }, 0.2)
+                Utility.Tween(dropList, { Size = UDim2.new(0, 130, 0, 0) }, 0.2)
                 task.delay(0.2, function()
                     dropList.Visible = false
                 end)
@@ -1020,11 +1044,11 @@ function NexusLib:CreateWindow(opts)
                     Text      = item,
                     Color     = Theme.TextSecondary,
                     BgColor   = Theme.DropdownItem,
-                    FrameSize = UDim2.new(1, 0, 0, 28),
+                    FrameSize = UDim2.new(1, 0, 0, 30),
                     Parent    = dropList,
                 })
                 itemBtn.TextXAlignment = Enum.TextXAlignment.Left
-                Utility.Padding(itemBtn, 0, 0, 8, 0)
+                Utility.Padding(itemBtn, 0, 0, 10, 0)
                 itemBtn.ZIndex = 11
 
                 itemBtn.MouseEnter:Connect(function()
@@ -1042,13 +1066,13 @@ function NexusLib:CreateWindow(opts)
             end
 
             local itemCount = #list
-            local listHeight = itemCount * 28
+            local listHeight = itemCount * 30
 
             dropBtn.MouseButton1Click:Connect(function()
                 open = not open
                 if open then
                     dropList.Visible = true
-                    Utility.Tween(dropList, { Size = UDim2.new(0, 120, 0, math.min(listHeight, 140)) }, 0.2)
+                    Utility.Tween(dropList, { Size = UDim2.new(0, 130, 0, math.min(listHeight, 150)) }, 0.2)
                     Utility.Tween(arrow, { Rotation = 180 }, 0.2)
                 else
                     closeDropdown()
@@ -1079,20 +1103,20 @@ function NexusLib:CreateWindow(opts)
             local numeric     = opts.Numeric     or false
             local callback    = opts.Callback    or function() end
 
-            local wrap = MakeWrapper(40)
+            local wrap = MakeWrapper(42)
 
             Utility.Label({
                 Text      = name,
                 FrameSize = UDim2.new(1, -150, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
+                Position  = UDim2.new(0, 14, 0, 0),
                 Parent    = wrap,
             })
 
             local inputFrame = Utility.Frame({
                 Name     = "InputFrame",
                 Color    = Theme.DropdownBg,
-                Size     = UDim2.new(0, 120, 0, 28),
-                Position = UDim2.new(1, -130, 0.5, -14),
+                Size     = UDim2.new(0, 130, 0, 30),
+                Position = UDim2.new(1, -140, 0.5, -15),
                 Parent   = wrap,
             })
             Utility.Corner(inputFrame)
@@ -1140,12 +1164,12 @@ function NexusLib:CreateWindow(opts)
             local default  = opts.Default  or Enum.KeyCode.F
             local callback = opts.Callback or function() end
 
-            local wrap = MakeWrapper(40)
+            local wrap = MakeWrapper(42)
 
             Utility.Label({
                 Text      = name,
                 FrameSize = UDim2.new(1, -150, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
+                Position  = UDim2.new(0, 14, 0, 0),
                 Parent    = wrap,
             })
 
@@ -1156,8 +1180,8 @@ function NexusLib:CreateWindow(opts)
                 BgColor   = Theme.DropdownBg,
                 Font      = Theme.FontBold,
                 Size      = 12,
-                FrameSize = UDim2.new(0, 80, 0, 28),
-                Position  = UDim2.new(1, -90, 0.5, -14),
+                FrameSize = UDim2.new(0, 90, 0, 30),
+                Position  = UDim2.new(1, -100, 0.5, -15),
                 Parent    = wrap,
             })
             Utility.Corner(keyBtn)
@@ -1198,26 +1222,26 @@ function NexusLib:CreateWindow(opts)
         function tabData:AddColorPicker(opts)
             opts = opts or {}
             local name     = opts.Name     or "Color"
-            local default  = opts.Default  or Color3.fromRGB(100, 80, 255)
+            local default  = opts.Default  or Theme.Accent
             local callback = opts.Callback or function() end
 
-            local wrap = MakeWrapper(40)
+            local wrap = MakeWrapper(42)
 
             Utility.Label({
                 Text      = name,
-                FrameSize = UDim2.new(1, -150, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
+                FrameSize = UDim2.new(1, -160, 1, 0),
+                Position  = UDim2.new(0, 14, 0, 0),
                 Parent    = wrap,
             })
 
             local presets = {
-                Color3.fromRGB(100, 80, 255),  -- Theme Accent
-                Color3.fromRGB(255, 80, 80),
-                Color3.fromRGB(80, 180, 255),
-                Color3.fromRGB(80, 230, 120),
-                Color3.fromRGB(255, 200, 50),
-                Color3.fromRGB(200, 80, 255),
-                Color3.fromRGB(255, 255, 255),
+                Color3.fromRGB(100, 80, 255),  -- Purple
+                Color3.fromRGB(255, 80, 80),   -- Red
+                Color3.fromRGB(80, 180, 255),  -- Blue
+                Color3.fromRGB(80, 230, 120),  -- Green
+                Color3.fromRGB(255, 200, 50),  -- Yellow
+                Color3.fromRGB(200, 80, 255),  -- Pink
+                Color3.fromRGB(255, 140, 80),  -- Orange
             }
 
             local currentColor = default
@@ -1226,15 +1250,15 @@ function NexusLib:CreateWindow(opts)
             local swatchHolder = Utility.Frame({
                 Name     = "Swatches",
                 Color    = Color3.fromRGB(0,0,0),
-                Size     = UDim2.new(0, 150, 0, 22),
-                Position = UDim2.new(1, -160, 0.5, -11),
+                Size     = UDim2.new(0, 160, 0, 24),
+                Position = UDim2.new(1, -170, 0.5, -12),
                 Parent   = wrap,
             })
             swatchHolder.BackgroundTransparency = 1
 
             local swatchList = Instance.new("UIListLayout")
             swatchList.FillDirection = Enum.FillDirection.Horizontal
-            swatchList.Padding       = UDim.new(0, 3)
+            swatchList.Padding       = UDim.new(0, 4)
             swatchList.Parent        = swatchHolder
 
             for _, col in ipairs(presets) do
@@ -1242,10 +1266,10 @@ function NexusLib:CreateWindow(opts)
                     Name      = "Swatch",
                     Text      = "",
                     BgColor   = col,
-                    FrameSize = UDim2.new(0, 18, 0, 18),
+                    FrameSize = UDim2.new(0, 20, 0, 20),
                     Parent    = swatchHolder,
                 })
-                Utility.Corner(sw, UDim.new(0, 4))
+                Utility.Corner(sw, UDim.new(0, 5))
                 sw.MouseButton1Click:Connect(function()
                     currentColor = col
                     pcall(callback, col)
@@ -1261,12 +1285,12 @@ function NexusLib:CreateWindow(opts)
                 Text      = text,
                 Color     = Theme.TextSecondary,
                 Size      = 12,
-                FrameSize = UDim2.new(1, 0, 0, 26),
+                FrameSize = UDim2.new(1, 0, 0, 28),
                 Position  = UDim2.new(0, 0, 0, 0),
                 Parent    = scroll,
             })
             lbl.TextWrapped = true
-            Utility.Padding(lbl, 0, 0, 12, 0)
+            Utility.Padding(lbl, 0, 0, 14, 0)
 
             local lObj = {}
             function lObj:Set(t) lbl.Text = t end
@@ -1289,10 +1313,26 @@ function NexusLib:CreateWindow(opts)
         Notify(opts)
     end
 
+    -- Theme update listener
+    OnThemeChange(function(newTheme)
+        window.BackgroundColor3 = newTheme.Background
+        topBar.BackgroundColor3 = newTheme.TopBar
+        accentLine.BackgroundColor3 = newTheme.Accent
+        logoFrame.BackgroundColor3 = newTheme.Accent
+        titleLabel.TextColor3 = newTheme.TextPrimary
+        subtitleLabel.TextColor3 = newTheme.TextSecondary
+        tabBar.BackgroundColor3 = newTheme.TopBar
+        tabBarDivider.BackgroundColor3 = newTheme.Border
+        contentArea.BackgroundColor3 = newTheme.Background
+        playerInfoFrame.BackgroundColor3 = newTheme.ElementBg
+        Utility.Stroke(playerInfoFrame, newTheme.ElementBorder, 1)
+        playerAvatar.BackgroundColor3 = newTheme.Accent
+        playerNameLabel.TextColor3 = newTheme.TextPrimary
+    end)
+
     return WindowObj
 end
 
--- Expose theme modification
-NexusLib.SetTheme = SetTheme
+NexusLib.SetTheme = UpdateTheme
 
 return NexusLib
