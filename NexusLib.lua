@@ -367,7 +367,7 @@ local function CreatePlayerProfile(parent)
 end
 
 -- ============================================================
--- RGB COLOR PICKER (intégré au wrapper, expansion dynamique)
+-- RGB COLOR PICKER (contenu à placer sous les swatches)
 -- ============================================================
 
 local function CreateRGBPickerContent(parent, currentColor, callback)
@@ -1035,11 +1035,12 @@ function NexusLib:CreateWindow(opts)
             local callback = opts.Callback or function() end
             local saveKey = opts.SaveKey
 
-            -- Hauteur initiale du wrapper (sans le picker)
+            -- Hauteur de base du wrapper : 44 (ligne du nom + swatches)
             local wrap = MakeWrapper(44)
-            local rgbContent = nil
+            local rgbContainer = nil
             local rgbVisible = false
 
+            -- Label
             Utility.Label({ Text = name, FrameSize = UDim2.new(1, -170, 1, 0), Position = UDim2.new(0, 14, 0, 0), Parent = wrap })
 
             -- Swatches horizontales (scrollable)
@@ -1076,6 +1077,7 @@ function NexusLib:CreateWindow(opts)
                 currentColor = Color3.new(s.r, s.g, s.b)
             end
 
+            -- Boutons prédéfinis
             for _, col in ipairs(presets) do
                 local sw = Utility.Button({ Name = "Swatch", Text = "", BgColor = col, FrameSize = UDim2.new(0, 22, 0, 22), Parent = swatchScroll })
                 Utility.Corner(sw, UDim.new(0, 6))
@@ -1088,25 +1090,28 @@ function NexusLib:CreateWindow(opts)
                         Configs.Save(configName, cfg)
                     end
                     -- Fermer le RGB si ouvert
-                    if rgbVisible and rgbContent then
-                        rgbContent.Visible = false
+                    if rgbVisible and rgbContainer then
+                        rgbContainer.Visible = false
                         rgbVisible = false
-                        wrap.Size = UDim2.new(1, 0, 0, 44) -- retour à la hauteur normale
+                        wrap.Size = UDim2.new(1, 0, 0, 44)
                     end
                 end)
             end
 
+            -- Bouton RGB (toggle)
             local rgbBtn = Utility.Button({ Name = "RGBBtn", Text = "RGB", Color = Theme.TextPrimary, BgColor = Theme.ButtonBg, FrameSize = UDim2.new(0, 40, 0, 22), Position = UDim2.new(1, -40, 0, 0), Parent = swatchScroll })
             Utility.Corner(rgbBtn, UDim.new(0, 6))
 
             rgbBtn.MouseButton1Click:Connect(function()
                 if rgbVisible then
-                    if rgbContent then rgbContent.Visible = false end
+                    -- Fermer
+                    if rgbContainer then rgbContainer.Visible = false end
                     rgbVisible = false
-                    wrap.Size = UDim2.new(1, 0, 0, 44)  -- rétrécir
+                    wrap.Size = UDim2.new(1, 0, 0, 44)
                 else
-                    if not rgbContent then
-                        rgbContent = CreateRGBPickerContent(wrap, currentColor, function(color)
+                    -- Ouvrir : créer le container s'il n'existe pas
+                    if not rgbContainer then
+                        rgbContainer = CreateRGBPickerContent(wrap, currentColor, function(color)
                             currentColor = color
                             pcall(callback, color)
                             if saveKey and configName then
@@ -1115,11 +1120,13 @@ function NexusLib:CreateWindow(opts)
                                 Configs.Save(configName, cfg)
                             end
                         end)
-                        rgbContent.Visible = false
+                        -- Positionner le container sous les swatches
+                        rgbContainer.Position = UDim2.new(0, 14, 0, 44) -- après la ligne des swatches (hauteur ~30 + marge)
                     end
-                    rgbContent.Visible = true
+                    rgbContainer.Visible = true
                     rgbVisible = true
-                    wrap.Size = UDim2.new(1, 0, 0, 44 + 110 + 8) -- hauteur originale + picker + marge
+                    -- Agrandir le wrapper : hauteur initiale 44 + hauteur du picker (110) + marge
+                    wrap.Size = UDim2.new(1, 0, 0, 44 + 110 + 8)
                 end
             end)
 
