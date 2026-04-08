@@ -1,5 +1,6 @@
 --[[
     NexusLib v1.0 — UI Library for Roblox Scripts
+    RGB picker always visible below swatches
 ]]
 
 -- ============================================================
@@ -367,7 +368,7 @@ local function CreatePlayerProfile(parent)
 end
 
 -- ============================================================
--- RGB COLOR PICKER (contenu à placer sous les swatches)
+-- RGB COLOR PICKER (always visible content)
 -- ============================================================
 
 local function CreateRGBPickerContent(parent, currentColor, callback)
@@ -1035,11 +1036,9 @@ function NexusLib:CreateWindow(opts)
             local callback = opts.Callback or function() end
             local saveKey = opts.SaveKey
 
-            -- Hauteur de base du wrapper : 44 (ligne du nom + swatches)
-            local wrap = MakeWrapper(44)
-            local rgbContainer = nil
-            local rgbVisible = false
-
+            -- Hauteur fixe : ligne du nom (44) + swatches (30) + RGB picker (110) + marges = 44+30+110+8 = 192
+            local wrap = MakeWrapper(44 + 30 + 110 + 8)
+            
             -- Label
             Utility.Label({ Text = name, FrameSize = UDim2.new(1, -170, 1, 0), Position = UDim2.new(0, 14, 0, 0), Parent = wrap })
 
@@ -1077,7 +1076,7 @@ function NexusLib:CreateWindow(opts)
                 currentColor = Color3.new(s.r, s.g, s.b)
             end
 
-            -- Boutons prédéfinis
+            -- Création des boutons prédéfinis
             for _, col in ipairs(presets) do
                 local sw = Utility.Button({ Name = "Swatch", Text = "", BgColor = col, FrameSize = UDim2.new(0, 22, 0, 22), Parent = swatchScroll })
                 Utility.Corner(sw, UDim.new(0, 6))
@@ -1089,28 +1088,9 @@ function NexusLib:CreateWindow(opts)
                         cfg[saveKey] = { r = col.R, g = col.G, b = col.B }
                         Configs.Save(configName, cfg)
                     end
-                    -- Fermer le RGB si ouvert
-                    if rgbVisible and rgbContainer then
-                        rgbContainer.Visible = false
-                        rgbVisible = false
-                        wrap.Size = UDim2.new(1, 0, 0, 44)
-                    end
-                end)
-            end
-
-            -- Bouton RGB (toggle)
-            local rgbBtn = Utility.Button({ Name = "RGBBtn", Text = "RGB", Color = Theme.TextPrimary, BgColor = Theme.ButtonBg, FrameSize = UDim2.new(0, 40, 0, 22), Position = UDim2.new(1, -40, 0, 0), Parent = swatchScroll })
-            Utility.Corner(rgbBtn, UDim.new(0, 6))
-
-            rgbBtn.MouseButton1Click:Connect(function()
-                if rgbVisible then
-                    -- Fermer
-                    if rgbContainer then rgbContainer.Visible = false end
-                    rgbVisible = false
-                    wrap.Size = UDim2.new(1, 0, 0, 44)
-                else
-                    -- Ouvrir : créer le container s'il n'existe pas
-                    if not rgbContainer then
+                    -- Mettre à jour le container RGB
+                    if rgbContainer then
+                        rgbContainer:Destroy()
                         rgbContainer = CreateRGBPickerContent(wrap, currentColor, function(color)
                             currentColor = color
                             pcall(callback, color)
@@ -1120,15 +1100,22 @@ function NexusLib:CreateWindow(opts)
                                 Configs.Save(configName, cfg)
                             end
                         end)
-                        -- Positionner le container sous les swatches
-                        rgbContainer.Position = UDim2.new(0, 14, 0, 44) -- après la ligne des swatches (hauteur ~30 + marge)
+                        rgbContainer.Position = UDim2.new(0, 14, 0, 44)
                     end
-                    rgbContainer.Visible = true
-                    rgbVisible = true
-                    -- Agrandir le wrapper : hauteur initiale 44 + hauteur du picker (110) + marge
-                    wrap.Size = UDim2.new(1, 0, 0, 44 + 110 + 8)
+                end)
+            end
+
+            -- Container RGB (toujours visible)
+            local rgbContainer = CreateRGBPickerContent(wrap, currentColor, function(color)
+                currentColor = color
+                pcall(callback, color)
+                if saveKey and configName then
+                    local cfg = Configs.Load(configName)
+                    cfg[saveKey] = { r = color.R, g = color.G, b = color.B }
+                    Configs.Save(configName, cfg)
                 end
             end)
+            rgbContainer.Position = UDim2.new(0, 14, 0, 44)  -- juste sous les swatches
 
             local cpObj = {}
             function cpObj:Get() return currentColor end
