@@ -1,6 +1,6 @@
 --[[
     NexusLib v1.0 — UI Library for Roblox Scripts
-    Version améliorée avec tabs fonctionnels et taille corrigée
+    A clean, modular library to build GUI panels quickly.
 ]]
 
 -- ============================================================
@@ -18,56 +18,75 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse       = LocalPlayer:GetMouse()
 
 -- ============================================================
--- THEME
+-- THEME (Customisable)
 -- ============================================================
 
 local Theme = {
+    -- Window
     Background    = Color3.fromRGB(15, 15, 20),
     TopBar        = Color3.fromRGB(20, 20, 28),
     Border        = Color3.fromRGB(50, 50, 70),
-    Accent        = Color3.fromRGB(100, 80, 255),
+    Accent        = Color3.fromRGB(100, 80, 255),   -- Primary accent color
     AccentDark    = Color3.fromRGB(70, 55, 180),
 
+    -- Tabs
     TabActive     = Color3.fromRGB(100, 80, 255),
     TabInactive   = Color3.fromRGB(30, 30, 42),
     TabText       = Color3.fromRGB(255, 255, 255),
     TabTextOff    = Color3.fromRGB(140, 140, 160),
 
+    -- Elements
     ElementBg     = Color3.fromRGB(22, 22, 32),
     ElementHover  = Color3.fromRGB(30, 30, 45),
     ElementBorder = Color3.fromRGB(45, 45, 65),
 
+    -- Text
     TextPrimary   = Color3.fromRGB(240, 240, 255),
     TextSecondary = Color3.fromRGB(150, 150, 175),
     TextDisabled  = Color3.fromRGB(80, 80, 100),
 
+    -- Toggle
     ToggleOn      = Color3.fromRGB(100, 80, 255),
     ToggleOff     = Color3.fromRGB(45, 45, 65),
     ToggleKnob    = Color3.fromRGB(255, 255, 255),
 
+    -- Slider
     SliderFill    = Color3.fromRGB(100, 80, 255),
     SliderBg      = Color3.fromRGB(40, 40, 58),
     SliderKnob    = Color3.fromRGB(255, 255, 255),
 
+    -- Dropdown
     DropdownBg    = Color3.fromRGB(18, 18, 26),
     DropdownItem  = Color3.fromRGB(25, 25, 36),
     DropdownHover = Color3.fromRGB(35, 35, 52),
 
-    ButtonBg      = Color3.fromRGB(35, 30, 70),
-    ButtonHover   = Color3.fromRGB(60, 50, 120),
-    ButtonBorder  = Color3.fromRGB(100, 80, 255),
+    -- Button
+    ButtonBg      = Color3.fromRGB(35, 35, 45),
+    ButtonHover   = Color3.fromRGB(45, 45, 60),
+    ButtonBorder  = Color3.fromRGB(60, 60, 80),
 
+    -- Notify
     NotifyBg      = Color3.fromRGB(20, 20, 30),
     NotifyBorder  = Color3.fromRGB(100, 80, 255),
     NotifySuccess = Color3.fromRGB(60, 200, 120),
     NotifyWarning = Color3.fromRGB(230, 180, 50),
     NotifyError   = Color3.fromRGB(220, 70, 70),
 
+    -- Sizes
     CornerRadius  = UDim.new(0, 6),
     Font          = Enum.Font.GothamMedium,
     FontBold      = Enum.Font.GothamBold,
     FontSize      = 13,
 }
+
+-- Function to modify theme colors
+local function SetTheme(newTheme)
+    for k, v in pairs(newTheme) do
+        if Theme[k] then
+            Theme[k] = v
+        end
+    end
+end
 
 -- ============================================================
 -- UTILITY FUNCTIONS
@@ -311,6 +330,68 @@ local function Notify(opts)
 end
 
 -- ============================================================
+-- PLAYER INFO DISPLAY
+-- ============================================================
+
+local PlayerInfoFrame = nil
+
+local function CreatePlayerInfo(screenGui)
+    PlayerInfoFrame = Utility.Frame({
+        Name     = "PlayerInfo",
+        Color    = Theme.TopBar,
+        Size     = UDim2.new(0, 200, 0, 36),
+        Position = UDim2.new(1, -210, 1, -46),
+        Parent   = screenGui,
+    })
+    PlayerInfoFrame.BackgroundTransparency = 0.85
+    Utility.Corner(PlayerInfoFrame, UDim.new(0, 8))
+    Utility.Stroke(PlayerInfoFrame, Theme.ElementBorder, 1)
+    
+    local avatarIcon = Utility.Frame({
+        Name     = "AvatarIcon",
+        Color    = Theme.Accent,
+        Size     = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new(0, 8, 0.5, -12),
+        Parent   = PlayerInfoFrame,
+    })
+    Utility.Corner(avatarIcon, UDim.new(0, 6))
+    
+    local playerName = Utility.Label({
+        Text      = LocalPlayer.Name,
+        Color     = Theme.TextPrimary,
+        Font      = Theme.FontBold,
+        Size      = 12,
+        FrameSize = UDim2.new(1, -70, 0, 18),
+        Position  = UDim2.new(0, 40, 0, 4),
+        Parent    = PlayerInfoFrame,
+    })
+    
+    local playerStatus = Utility.Label({
+        Text      = "Online",
+        Color     = Theme.NotifySuccess,
+        Size      = 10,
+        FrameSize = UDim2.new(1, -70, 0, 14),
+        Position  = UDim2.new(0, 40, 0, 20),
+        Parent    = PlayerInfoFrame,
+    })
+    
+    local pingIcon = Utility.Frame({
+        Name     = "PingIcon",
+        Color    = Theme.NotifySuccess,
+        Size     = UDim2.new(0, 6, 0, 6),
+        Position = UDim2.new(1, -20, 0.5, -3),
+        Parent   = PlayerInfoFrame,
+    })
+    Utility.Corner(pingIcon, UDim.new(0, 3))
+    
+    -- Animation d'entrée
+    PlayerInfoFrame.Position = UDim2.new(1, -210, 1, 10)
+    Utility.Tween(PlayerInfoFrame, { Position = UDim2.new(1, -210, 1, -46) }, 0.4)
+    
+    return PlayerInfoFrame
+end
+
+-- ============================================================
 -- NEXUSLIB CORE
 -- ============================================================
 
@@ -322,6 +403,20 @@ function NexusLib:CreateWindow(opts)
     local title    = opts.Title    or "NexusLib"
     local subtitle = opts.Subtitle or "v1.0"
     local size     = opts.Size     or UDim2.new(0, 520, 0, 420)
+    local accentColor = opts.AccentColor or Theme.Accent
+    
+    -- Update accent colors if provided
+    if opts.AccentColor then
+        Theme.Accent = opts.AccentColor
+        Theme.AccentDark = Color3.new(
+            opts.AccentColor.R * 0.7,
+            opts.AccentColor.G * 0.7,
+            opts.AccentColor.B * 0.7
+        )
+        Theme.TabActive = opts.AccentColor
+        Theme.ToggleOn = opts.AccentColor
+        Theme.SliderFill = opts.AccentColor
+    end
 
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name             = "NexusLib_" .. title
@@ -331,6 +426,7 @@ function NexusLib:CreateWindow(opts)
     screenGui.Parent           = LocalPlayer:WaitForChild("PlayerGui")
 
     InitNotifications(screenGui)
+    CreatePlayerInfo(screenGui)
 
     local window = Utility.Frame({
         Name     = "Window",
@@ -369,6 +465,7 @@ function NexusLib:CreateWindow(opts)
         Parent   = window,
     })
 
+    -- Logo/Demo text
     local logoFrame = Utility.Frame({
         Name     = "LogoFrame",
         Color    = Theme.Accent,
@@ -396,48 +493,35 @@ function NexusLib:CreateWindow(opts)
         Parent    = topBar,
     })
 
-    local closeBtn = Utility.Button({
-        Name      = "CloseBtn",
-        Text      = "✕",
-        Color     = Theme.TextSecondary,
-        BgColor   = Color3.fromRGB(0,0,0),
-        FrameSize = UDim2.new(0, 28, 0, 28),
-        Position  = UDim2.new(1, -36, 0.5, -14),
-        Parent    = topBar,
+    -- Window control buttons group
+    local btnGroup = Utility.Frame({
+        Name     = "BtnGroup",
+        Color    = Color3.fromRGB(0,0,0),
+        Size     = UDim2.new(0, 90, 0, 28),
+        Position = UDim2.new(1, -100, 0.5, -14),
+        Parent   = topBar,
     })
-    closeBtn.BackgroundTransparency = 1
+    btnGroup.BackgroundTransparency = 1
 
-    closeBtn.MouseEnter:Connect(function()
-        Utility.Tween(closeBtn, { TextColor3 = Color3.fromRGB(220,70,70) }, 0.15)
-    end)
-    closeBtn.MouseLeave:Connect(function()
-        Utility.Tween(closeBtn, { TextColor3 = Theme.TextSecondary }, 0.15)
-    end)
-    closeBtn.MouseButton1Click:Connect(function()
-        Utility.Tween(window, { Size = UDim2.new(0, window.Size.X.Offset, 0, 0) }, 0.25)
-        task.delay(0.3, function()
-            screenGui:Destroy()
-        end)
-    end)
-
+    -- Minimize button with icon
     local minimized = false
     local normalSize = size
     local minBtn = Utility.Button({
         Name      = "MinBtn",
         Text      = "─",
         Color     = Theme.TextSecondary,
-        BgColor   = Color3.fromRGB(0,0,0),
+        BgColor   = Color3.fromRGB(25, 25, 35),
         FrameSize = UDim2.new(0, 28, 0, 28),
-        Position  = UDim2.new(1, -68, 0.5, -14),
-        Parent    = topBar,
+        Position  = UDim2.new(0, 0, 0, 0),
+        Parent    = btnGroup,
     })
-    minBtn.BackgroundTransparency = 1
+    Utility.Corner(minBtn, UDim.new(0, 6))
 
     minBtn.MouseEnter:Connect(function()
-        Utility.Tween(minBtn, { TextColor3 = Theme.Accent }, 0.15)
+        Utility.Tween(minBtn, { BackgroundColor3 = Theme.ElementHover, TextColor3 = Theme.Accent }, 0.15)
     end)
     minBtn.MouseLeave:Connect(function()
-        Utility.Tween(minBtn, { TextColor3 = Theme.TextSecondary }, 0.15)
+        Utility.Tween(minBtn, { BackgroundColor3 = Color3.fromRGB(25, 25, 35), TextColor3 = Theme.TextSecondary }, 0.15)
     end)
     minBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
@@ -447,6 +531,31 @@ function NexusLib:CreateWindow(opts)
         else
             Utility.Tween(window, { Size = normalSize }, 0.25)
         end
+    end)
+
+    -- Close button with icon
+    local closeBtn = Utility.Button({
+        Name      = "CloseBtn",
+        Text      = "✕",
+        Color     = Theme.TextSecondary,
+        BgColor   = Color3.fromRGB(25, 25, 35),
+        FrameSize = UDim2.new(0, 28, 0, 28),
+        Position  = UDim2.new(0, 31, 0, 0),
+        Parent    = btnGroup,
+    })
+    Utility.Corner(closeBtn, UDim.new(0, 6))
+
+    closeBtn.MouseEnter:Connect(function()
+        Utility.Tween(closeBtn, { BackgroundColor3 = Color3.fromRGB(70, 30, 30), TextColor3 = Color3.fromRGB(220,70,70) }, 0.15)
+    end)
+    closeBtn.MouseLeave:Connect(function()
+        Utility.Tween(closeBtn, { BackgroundColor3 = Color3.fromRGB(25, 25, 35), TextColor3 = Theme.TextSecondary }, 0.15)
+    end)
+    closeBtn.MouseButton1Click:Connect(function()
+        Utility.Tween(window, { Size = UDim2.new(0, window.Size.X.Offset, 0, 0) }, 0.25)
+        task.delay(0.3, function()
+            screenGui:Destroy()
+        end)
     end)
 
     Utility.MakeDraggable(window, topBar)
@@ -693,11 +802,11 @@ function NexusLib:CreateWindow(opts)
 
             local btn = Utility.Button({
                 Name      = "Btn",
-                Text      = "Execute",
+                Text      = "→",
                 Color     = Theme.TextPrimary,
                 BgColor   = Theme.ButtonBg,
-                FrameSize = UDim2.new(0, 80, 0, 26),
-                Position  = UDim2.new(1, -90, 0.5, -13),
+                FrameSize = UDim2.new(0, 36, 0, 26),
+                Position  = UDim2.new(1, -46, 0.5, -13),
                 Parent    = wrap,
             })
             Utility.Corner(btn)
@@ -705,9 +814,11 @@ function NexusLib:CreateWindow(opts)
 
             btn.MouseEnter:Connect(function()
                 Utility.Tween(btn, { BackgroundColor3 = Theme.ButtonHover }, 0.1)
+                Utility.Tween(btn, { Text = "▶" }, 0.1)
             end)
             btn.MouseLeave:Connect(function()
                 Utility.Tween(btn, { BackgroundColor3 = Theme.ButtonBg }, 0.1)
+                Utility.Tween(btn, { Text = "→" }, 0.1)
             end)
             btn.MouseButton1Click:Connect(function()
                 Utility.Tween(btn, { BackgroundColor3 = Theme.Accent }, 0.1)
@@ -1181,8 +1292,7 @@ function NexusLib:CreateWindow(opts)
     return WindowObj
 end
 
--- ============================================================
--- RETURN
--- ============================================================
+-- Expose theme modification
+NexusLib.SetTheme = SetTheme
 
 return NexusLib
