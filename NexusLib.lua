@@ -1,19 +1,6 @@
 --[[
-    ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗    ██╗     ██╗██████╗
-    ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝    ██║     ██║██╔══██╗
-    ██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗    ██║     ██║██████╔╝
-    ██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║    ██║     ██║██╔══██╗
-    ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║    ███████╗██║██████╔╝
-    ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝    ╚══════╝╚═╝╚═════╝
-
     NexusLib v1.0 — UI Library for Roblox Scripts
-    A clean, modular library to build GUI panels quickly.
-
-    USAGE:
-        local NexusLib = loadstring(game:HttpGet("..."))()
-        local Window = NexusLib:CreateWindow({ Title = "My Script" })
-        local Tab = Window:AddTab("Main")
-        Tab:AddToggle({ Name = "Auto Farm", Callback = function(v) print(v) end })
+    Version améliorée avec tabs fonctionnels et taille corrigée
 ]]
 
 -- ============================================================
@@ -24,6 +11,8 @@ local Players        = game:GetService("Players")
 local TweenService   = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService     = game:GetService("RunService")
+local Lighting       = game:GetService("Lighting")
+local Workspace      = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 local Mouse       = LocalPlayer:GetMouse()
@@ -33,57 +22,47 @@ local Mouse       = LocalPlayer:GetMouse()
 -- ============================================================
 
 local Theme = {
-    -- Window
     Background    = Color3.fromRGB(15, 15, 20),
     TopBar        = Color3.fromRGB(20, 20, 28),
     Border        = Color3.fromRGB(50, 50, 70),
-    Accent        = Color3.fromRGB(100, 80, 255),   -- Purple accent
+    Accent        = Color3.fromRGB(100, 80, 255),
     AccentDark    = Color3.fromRGB(70, 55, 180),
 
-    -- Tabs
     TabActive     = Color3.fromRGB(100, 80, 255),
     TabInactive   = Color3.fromRGB(30, 30, 42),
     TabText       = Color3.fromRGB(255, 255, 255),
     TabTextOff    = Color3.fromRGB(140, 140, 160),
 
-    -- Elements
     ElementBg     = Color3.fromRGB(22, 22, 32),
     ElementHover  = Color3.fromRGB(30, 30, 45),
     ElementBorder = Color3.fromRGB(45, 45, 65),
 
-    -- Text
     TextPrimary   = Color3.fromRGB(240, 240, 255),
     TextSecondary = Color3.fromRGB(150, 150, 175),
     TextDisabled  = Color3.fromRGB(80, 80, 100),
 
-    -- Toggle
     ToggleOn      = Color3.fromRGB(100, 80, 255),
     ToggleOff     = Color3.fromRGB(45, 45, 65),
     ToggleKnob    = Color3.fromRGB(255, 255, 255),
 
-    -- Slider
     SliderFill    = Color3.fromRGB(100, 80, 255),
     SliderBg      = Color3.fromRGB(40, 40, 58),
     SliderKnob    = Color3.fromRGB(255, 255, 255),
 
-    -- Dropdown
     DropdownBg    = Color3.fromRGB(18, 18, 26),
     DropdownItem  = Color3.fromRGB(25, 25, 36),
     DropdownHover = Color3.fromRGB(35, 35, 52),
 
-    -- Button
     ButtonBg      = Color3.fromRGB(35, 30, 70),
     ButtonHover   = Color3.fromRGB(60, 50, 120),
     ButtonBorder  = Color3.fromRGB(100, 80, 255),
 
-    -- Notify
     NotifyBg      = Color3.fromRGB(20, 20, 30),
     NotifyBorder  = Color3.fromRGB(100, 80, 255),
     NotifySuccess = Color3.fromRGB(60, 200, 120),
     NotifyWarning = Color3.fromRGB(230, 180, 50),
     NotifyError   = Color3.fromRGB(220, 70, 70),
 
-    -- Sizes
     CornerRadius  = UDim.new(0, 6),
     Font          = Enum.Font.GothamMedium,
     FontBold      = Enum.Font.GothamBold,
@@ -96,7 +75,6 @@ local Theme = {
 
 local Utility = {}
 
--- Tween helper
 function Utility.Tween(obj, props, duration, style, dir)
     style    = style or Enum.EasingStyle.Quart
     dir      = dir or Enum.EasingDirection.Out
@@ -105,7 +83,6 @@ function Utility.Tween(obj, props, duration, style, dir)
     TweenService:Create(obj, info, props):Play()
 end
 
--- Create and style a UICorner
 function Utility.Corner(parent, radius)
     local c = Instance.new("UICorner")
     c.CornerRadius = radius or Theme.CornerRadius
@@ -113,7 +90,6 @@ function Utility.Corner(parent, radius)
     return c
 end
 
--- Create a UIStroke
 function Utility.Stroke(parent, color, thickness)
     local s = Instance.new("UIStroke")
     s.Color     = color or Theme.Border
@@ -122,7 +98,6 @@ function Utility.Stroke(parent, color, thickness)
     return s
 end
 
--- Create a UIPadding
 function Utility.Padding(parent, top, bottom, left, right)
     local p = Instance.new("UIPadding")
     p.PaddingTop    = UDim.new(0, top    or 0)
@@ -133,7 +108,6 @@ function Utility.Padding(parent, top, bottom, left, right)
     return p
 end
 
--- Create base Frame
 function Utility.Frame(props)
     local f = Instance.new("Frame")
     f.BackgroundColor3 = props.Color     or Color3.fromRGB(255,255,255)
@@ -145,7 +119,6 @@ function Utility.Frame(props)
     return f
 end
 
--- Create TextLabel
 function Utility.Label(props)
     local l = Instance.new("TextLabel")
     l.Text             = props.Text      or ""
@@ -162,7 +135,6 @@ function Utility.Label(props)
     return l
 end
 
--- Create TextButton
 function Utility.Button(props)
     local b = Instance.new("TextButton")
     b.Text             = props.Text      or ""
@@ -179,7 +151,6 @@ function Utility.Button(props)
     return b
 end
 
--- Create TextBox
 function Utility.TextBox(props)
     local t = Instance.new("TextBox")
     t.Text             = props.Text       or ""
@@ -198,7 +169,6 @@ function Utility.TextBox(props)
     return t
 end
 
--- Draggable function
 function Utility.MakeDraggable(frame, handle)
     handle = handle or frame
     local dragging, dragInput, mousePos, framePos = false, nil, nil, nil
@@ -265,7 +235,7 @@ local function Notify(opts)
     local title    = opts.Title    or "Notification"
     local message  = opts.Message  or ""
     local duration = opts.Duration or 3
-    local ntype    = opts.Type     or "Info"   -- "Info", "Success", "Warning", "Error"
+    local ntype    = opts.Type     or "Info"
 
     local accentColor = Theme.Accent
     if ntype == "Success" then accentColor = Theme.NotifySuccess
@@ -273,7 +243,6 @@ local function Notify(opts)
     elseif ntype == "Error"   then accentColor = Theme.NotifyError
     end
 
-    -- Container
     local notif = Utility.Frame({
         Name  = "Notification",
         Color = Theme.NotifyBg,
@@ -284,7 +253,6 @@ local function Notify(opts)
     Utility.Stroke(notif, Theme.ElementBorder, 1)
     notif.Parent = NotificationHolder
 
-    -- Left accent bar
     local bar = Utility.Frame({
         Name   = "Bar",
         Color  = accentColor,
@@ -293,7 +261,6 @@ local function Notify(opts)
     })
     Utility.Corner(bar, UDim.new(0, 2))
 
-    -- Title
     Utility.Label({
         Text     = title,
         Color    = Theme.TextPrimary,
@@ -304,7 +271,6 @@ local function Notify(opts)
         Parent   = notif,
     })
 
-    -- Message
     local msgLabel = Instance.new("TextLabel")
     msgLabel.Text = message
     msgLabel.TextColor3 = Theme.TextSecondary
@@ -318,7 +284,6 @@ local function Notify(opts)
     msgLabel.Position = UDim2.new(0, 12, 0, 30)
     msgLabel.Parent = notif
 
-    -- Progress bar
     local progressBg = Utility.Frame({
         Name   = "ProgressBg",
         Color  = Theme.ElementBorder,
@@ -333,11 +298,8 @@ local function Notify(opts)
         Parent = progressBg,
     })
 
-    -- Animate in
     notif.Position = UDim2.new(1, 300, 0, 0)
     Utility.Tween(notif, { Position = UDim2.new(0, 0, 0, 0) }, 0.3)
-
-    -- Progress shrink
     Utility.Tween(progress, { Size = UDim2.new(0, 0, 1, 0) }, duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
 
     task.delay(duration, function()
@@ -355,17 +317,12 @@ end
 local NexusLib = {}
 NexusLib.__index = NexusLib
 
--- ============================================================
--- WINDOW
--- ============================================================
-
 function NexusLib:CreateWindow(opts)
     opts = opts or {}
     local title    = opts.Title    or "NexusLib"
     local subtitle = opts.Subtitle or "v1.0"
-    local size     = opts.Size     or UDim2.new(0, 520, 0, 380)
+    local size     = opts.Size     or UDim2.new(0, 520, 0, 420)
 
-    -- ScreenGui
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name             = "NexusLib_" .. title
     screenGui.ResetOnSpawn     = false
@@ -375,19 +332,17 @@ function NexusLib:CreateWindow(opts)
 
     InitNotifications(screenGui)
 
-    -- Main window frame
     local window = Utility.Frame({
         Name     = "Window",
         Color    = Theme.Background,
         Size     = size,
-        Position = UDim2.new(0.5, -(size.X.Offset/2), 0.5, -(size.Y.Offset/2)),
+        Position = UDim2.new(0.5, -size.X.Offset/2, 0.5, -size.Y.Offset/2),
         Parent   = screenGui,
     })
     window.ClipsDescendants = true
     Utility.Corner(window, UDim.new(0, 10))
     Utility.Stroke(window, Theme.Border, 1)
 
-    -- Drop shadow (simulated via outer frame)
     local shadow = Utility.Frame({
         Name     = "Shadow",
         Color    = Color3.fromRGB(0,0,0),
@@ -399,7 +354,6 @@ function NexusLib:CreateWindow(opts)
     shadow.ZIndex = 0
     Utility.Corner(shadow, UDim.new(0, 14))
 
-    -- Top bar
     local topBar = Utility.Frame({
         Name   = "TopBar",
         Color  = Theme.TopBar,
@@ -407,7 +361,6 @@ function NexusLib:CreateWindow(opts)
         Parent = window,
     })
 
-    -- Accent line under top bar
     local accentLine = Utility.Frame({
         Name     = "AccentLine",
         Color    = Theme.Accent,
@@ -416,7 +369,6 @@ function NexusLib:CreateWindow(opts)
         Parent   = window,
     })
 
-    -- Logo / Title area
     local logoFrame = Utility.Frame({
         Name     = "LogoFrame",
         Color    = Theme.Accent,
@@ -444,7 +396,6 @@ function NexusLib:CreateWindow(opts)
         Parent    = topBar,
     })
 
-    -- Close button
     local closeBtn = Utility.Button({
         Name      = "CloseBtn",
         Text      = "✕",
@@ -469,7 +420,6 @@ function NexusLib:CreateWindow(opts)
         end)
     end)
 
-    -- Minimize button
     local minimized = false
     local normalSize = size
     local minBtn = Utility.Button({
@@ -499,14 +449,12 @@ function NexusLib:CreateWindow(opts)
         end
     end)
 
-    -- Make draggable
     Utility.MakeDraggable(window, topBar)
 
-    -- Tab bar
     local tabBar = Utility.Frame({
         Name     = "TabBar",
         Color    = Theme.TopBar,
-        Size     = UDim2.new(0, 130, 1, -45),
+        Size     = UDim2.new(0, 150, 1, -45),
         Position = UDim2.new(0, 0, 0, 45),
         Parent   = window,
     })
@@ -519,23 +467,30 @@ function NexusLib:CreateWindow(opts)
         Parent   = tabBar,
     })
 
+    local tabScroll = Instance.new("ScrollingFrame")
+    tabScroll.Name = "TabScroll"
+    tabScroll.Size = UDim2.new(1, 0, 1, 0)
+    tabScroll.BackgroundTransparency = 1
+    tabScroll.BorderSizePixel = 0
+    tabScroll.ScrollBarThickness = 3
+    tabScroll.ScrollBarImageColor3 = Theme.Accent
+    tabScroll.Parent = tabBar
+
     local tabList = Instance.new("UIListLayout")
     tabList.SortOrder          = Enum.SortOrder.LayoutOrder
     tabList.HorizontalAlignment = Enum.HorizontalAlignment.Center
     tabList.Padding            = UDim.new(0, 3)
-    tabList.Parent             = tabBar
-    Utility.Padding(tabBar, 8, 8, 6, 6)
+    tabList.Parent             = tabScroll
+    Utility.Padding(tabScroll, 8, 8, 6, 6)
 
-    -- Content area
     local contentArea = Utility.Frame({
         Name     = "ContentArea",
         Color    = Theme.Background,
-        Size     = UDim2.new(1, -130, 1, -45),
-        Position = UDim2.new(0, 130, 0, 45),
+        Size     = UDim2.new(1, -150, 1, -45),
+        Position = UDim2.new(0, 150, 0, 45),
         Parent   = window,
     })
 
-    -- Window object
     local WindowObj  = {}
     local tabs       = {}
     local activeTab  = nil
@@ -544,21 +499,19 @@ function NexusLib:CreateWindow(opts)
         local tabData = {}
         tabData.Name = name
 
-        -- Tab button
         local tabBtn = Utility.Button({
             Name      = name .. "Tab",
             Text      = (icon and (icon .. "  ") or "") .. name,
             Color     = Theme.TabTextOff,
             BgColor   = Theme.TabInactive,
             Font      = Theme.Font,
-            FrameSize = UDim2.new(1, 0, 0, 32),
-            Parent    = tabBar,
+            FrameSize = UDim2.new(1, -10, 0, 32),
+            Parent    = tabScroll,
         })
         tabBtn.TextXAlignment = Enum.TextXAlignment.Left
         Utility.Corner(tabBtn, UDim.new(0, 6))
         Utility.Padding(tabBtn, 0, 0, 10, 0)
 
-        -- Tab content frame
         local tabContent = Utility.Frame({
             Name     = name .. "Content",
             Color    = Theme.Background,
@@ -567,13 +520,12 @@ function NexusLib:CreateWindow(opts)
         })
         tabContent.Visible = false
 
-        -- Scroll frame inside tab
         local scroll = Instance.new("ScrollingFrame")
         scroll.Name               = "Scroll"
         scroll.Size               = UDim2.new(1, 0, 1, 0)
         scroll.BackgroundTransparency = 1
         scroll.BorderSizePixel    = 0
-        scroll.ScrollBarThickness = 3
+        scroll.ScrollBarThickness = 4
         scroll.ScrollBarImageColor3 = Theme.Accent
         scroll.CanvasSize         = UDim2.new(0, 0, 0, 0)
         scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -581,11 +533,10 @@ function NexusLib:CreateWindow(opts)
 
         local listLayout = Instance.new("UIListLayout")
         listLayout.SortOrder  = Enum.SortOrder.LayoutOrder
-        listLayout.Padding    = UDim.new(0, 5)
+        listLayout.Padding    = UDim.new(0, 6)
         listLayout.Parent     = scroll
-        Utility.Padding(scroll, 8, 8, 10, 10)
+        Utility.Padding(scroll, 8, 8, 12, 12)
 
-        -- Switch to this tab
         local function activateTab()
             if activeTab then
                 activeTab.Content.Visible = false
@@ -614,7 +565,6 @@ function NexusLib:CreateWindow(opts)
             end
         end)
 
-        -- Auto-activate first tab
         if #tabs == 0 then
             activateTab()
         end
@@ -625,7 +575,6 @@ function NexusLib:CreateWindow(opts)
         -- ELEMENTS
         -- ============================================================
 
-        -- Helper: create element wrapper
         local function MakeWrapper(height)
             local wrap = Utility.Frame({
                 Name   = "Element",
@@ -638,22 +587,18 @@ function NexusLib:CreateWindow(opts)
             return wrap
         end
 
-        -- ── SECTION LABEL ────────────────────────────────────────────
-
         function tabData:AddSection(name)
             local sectionLabel = Utility.Label({
                 Text      = name,
-                Color     = Theme.TextSecondary,
+                Color     = Theme.Accent,
                 Font      = Theme.FontBold,
-                Size      = 11,
-                FrameSize = UDim2.new(1, 0, 0, 18),
+                Size      = 12,
+                FrameSize = UDim2.new(1, 0, 0, 22),
                 Parent    = scroll,
             })
             sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
             Utility.Padding(sectionLabel, 0, 0, 4, 0)
         end
-
-        -- ── TOGGLE ────────────────────────────────────────────────────
 
         function tabData:AddToggle(opts)
             opts = opts or {}
@@ -718,13 +663,11 @@ function NexusLib:CreateWindow(opts)
             return togObj
         end
 
-        -- ── BUTTON ────────────────────────────────────────────────────
-
         function tabData:AddButton(opts)
             opts = opts or {}
             local name     = opts.Name     or "Button"
             local callback = opts.Callback or function() end
-            local desc      = opts.Description
+            local desc     = opts.Description
 
             local height = desc and 52 or 40
             local wrap   = MakeWrapper(height)
@@ -733,7 +676,7 @@ function NexusLib:CreateWindow(opts)
                 Text      = name,
                 Font      = Theme.FontBold,
                 FrameSize = UDim2.new(1, -110, 0, 24),
-                Position  = UDim2.new(0, 12, 0, desc and 8 or 0),
+                Position  = UDim2.new(0, 12, 0, desc and 8 or 8),
                 Parent    = wrap,
             })
 
@@ -780,8 +723,6 @@ function NexusLib:CreateWindow(opts)
                 Utility.Tween(wrap, { BackgroundColor3 = Theme.ElementBg }, 0.1)
             end)
         end
-
-        -- ── SLIDER ────────────────────────────────────────────────────
 
         function tabData:AddSlider(opts)
             opts = opts or {}
@@ -891,8 +832,6 @@ function NexusLib:CreateWindow(opts)
             return sliderObj
         end
 
-        -- ── DROPDOWN ─────────────────────────────────────────────────
-
         function tabData:AddDropdown(opts)
             opts = opts or {}
             local name     = opts.Name     or "Dropdown"
@@ -925,7 +864,6 @@ function NexusLib:CreateWindow(opts)
             Utility.Stroke(dropBtn, Theme.ElementBorder, 1)
             Utility.Padding(dropBtn, 0, 0, 8, 0)
 
-            -- Arrow icon
             local arrow = Utility.Label({
                 Text      = "▾",
                 Color     = Theme.TextSecondary,
@@ -935,7 +873,6 @@ function NexusLib:CreateWindow(opts)
                 Parent    = dropBtn,
             })
 
-            -- Dropdown list frame
             local dropList = Utility.Frame({
                 Name     = "DropList",
                 Color    = Theme.DropdownBg,
@@ -966,7 +903,6 @@ function NexusLib:CreateWindow(opts)
                 Utility.Tween(arrow, { Rotation = 0 }, 0.2)
             end
 
-            -- Populate items
             for _, item in ipairs(list) do
                 local itemBtn = Utility.Button({
                     Name      = item,
@@ -1023,8 +959,6 @@ function NexusLib:CreateWindow(opts)
 
             return ddObj
         end
-
-        -- ── TEXTBOX ───────────────────────────────────────────────────
 
         function tabData:AddTextBox(opts)
             opts = opts or {}
@@ -1089,8 +1023,6 @@ function NexusLib:CreateWindow(opts)
             return tbObj
         end
 
-        -- ── KEYBIND ───────────────────────────────────────────────────
-
         function tabData:AddKeybind(opts)
             opts = opts or {}
             local name     = opts.Name     or "Keybind"
@@ -1136,7 +1068,7 @@ function NexusLib:CreateWindow(opts)
                     currentKey = input.KeyCode
                     keyBtn.Text = "[" .. input.KeyCode.Name .. "]"
                     keyBtn.TextColor3 = Theme.Accent
-                elseif not listening and input.KeyCode == currentKey then
+                elseif not listening and input.KeyCode == currentKey and not gameProcessed then
                     pcall(callback, currentKey)
                 end
             end)
@@ -1152,12 +1084,10 @@ function NexusLib:CreateWindow(opts)
             return kbObj
         end
 
-        -- ── COLOR PICKER (simple) ─────────────────────────────────────
-
         function tabData:AddColorPicker(opts)
             opts = opts or {}
             local name     = opts.Name     or "Color"
-            local default  = opts.Default  or Color3.fromRGB(255, 80, 80)
+            local default  = opts.Default  or Color3.fromRGB(100, 80, 255)
             local callback = opts.Callback or function() end
 
             local wrap = MakeWrapper(40)
@@ -1170,11 +1100,12 @@ function NexusLib:CreateWindow(opts)
             })
 
             local presets = {
-                Color3.fromRGB(255, 80,  80),
-                Color3.fromRGB(80,  180, 255),
-                Color3.fromRGB(80,  230, 120),
+                Color3.fromRGB(100, 80, 255),  -- Theme Accent
+                Color3.fromRGB(255, 80, 80),
+                Color3.fromRGB(80, 180, 255),
+                Color3.fromRGB(80, 230, 120),
                 Color3.fromRGB(255, 200, 50),
-                Color3.fromRGB(200, 80,  255),
+                Color3.fromRGB(200, 80, 255),
                 Color3.fromRGB(255, 255, 255),
             }
 
@@ -1184,8 +1115,8 @@ function NexusLib:CreateWindow(opts)
             local swatchHolder = Utility.Frame({
                 Name     = "Swatches",
                 Color    = Color3.fromRGB(0,0,0),
-                Size     = UDim2.new(0, 132, 0, 22),
-                Position = UDim2.new(1, -142, 0.5, -11),
+                Size     = UDim2.new(0, 150, 0, 22),
+                Position = UDim2.new(1, -160, 0.5, -11),
                 Parent   = wrap,
             })
             swatchHolder.BackgroundTransparency = 1
@@ -1214,8 +1145,6 @@ function NexusLib:CreateWindow(opts)
             return cpObj
         end
 
-        -- ── LABEL (info text) ─────────────────────────────────────────
-
         function tabData:AddLabel(text)
             local lbl = Utility.Label({
                 Text      = text,
@@ -1233,8 +1162,6 @@ function NexusLib:CreateWindow(opts)
             return lObj
         end
 
-        -- ── SEPARATOR ─────────────────────────────────────────────────
-
         function tabData:AddSeparator()
             local sep = Utility.Frame({
                 Name   = "Separator",
@@ -1247,7 +1174,6 @@ function NexusLib:CreateWindow(opts)
         return tabData
     end
 
-    -- Expose Notify on the window
     function WindowObj:Notify(opts)
         Notify(opts)
     end
