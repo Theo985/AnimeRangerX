@@ -367,21 +367,19 @@ local function CreatePlayerProfile(parent)
 end
 
 -- ============================================================
--- RGB COLOR PICKER (popup style with dynamic shift)
+-- RGB COLOR PICKER (intégré au wrapper, expansion dynamique)
 -- ============================================================
 
-local function CreateRGBPicker(parent, currentColor, callback)
-    -- Frame principal qui s'ajoute sous l'élément appelant
+local function CreateRGBPickerContent(parent, currentColor, callback)
     local container = Utility.Frame({
         Name = "RGBContainer",
         Color = Theme.ElementBg,
         Size = UDim2.new(1, -28, 0, 110),
-        Position = UDim2.new(0, 14, 1, 4),
+        Position = UDim2.new(0, 14, 0, 0),
         Parent = parent,
     })
     Utility.Corner(container, UDim.new(0, 8))
     Utility.Stroke(container, Theme.ElementBorder, 1)
-    container.Visible = false
 
     local r, g, b = currentColor.R, currentColor.G, currentColor.B
 
@@ -513,7 +511,7 @@ function NexusLib:CreateWindow(opts)
     local titleLabel = Utility.Label({ Text = title, Font = Theme.FontBold, Size = 17, FrameSize = UDim2.new(0, 200, 0, 24), Position = UDim2.new(0, 28, 0, 10), Parent = topBar })
     local subtitleLabel = Utility.Label({ Text = subtitle, Color = Theme.SubtitleColor, Size = 11, FrameSize = UDim2.new(0, 200, 0, 18), Position = UDim2.new(0, 28, 0, 34), Parent = topBar })
 
-    -- Window controls (bien alignés à droite)
+    -- Window controls
     local btnGroup = Utility.Frame({ Name = "BtnGroup", Color = Color3.fromRGB(0,0,0), Size = UDim2.new(0, 100, 0, 34), Position = UDim2.new(1, -110, 0.5, -17), Parent = topBar })
     btnGroup.BackgroundTransparency = 1
 
@@ -1037,8 +1035,11 @@ function NexusLib:CreateWindow(opts)
             local callback = opts.Callback or function() end
             local saveKey = opts.SaveKey
 
+            -- Hauteur initiale du wrapper (sans le picker)
             local wrap = MakeWrapper(44)
-            wrap.ClipsDescendants = false  -- pour que le container RGB puisse dépasser
+            local rgbContent = nil
+            local rgbVisible = false
+
             Utility.Label({ Text = name, FrameSize = UDim2.new(1, -170, 1, 0), Position = UDim2.new(0, 14, 0, 0), Parent = wrap })
 
             -- Swatches horizontales (scrollable)
@@ -1086,23 +1087,26 @@ function NexusLib:CreateWindow(opts)
                         cfg[saveKey] = { r = col.R, g = col.G, b = col.B }
                         Configs.Save(configName, cfg)
                     end
-                    if rgbContainer then rgbContainer.Visible = false end
+                    -- Fermer le RGB si ouvert
+                    if rgbVisible and rgbContent then
+                        rgbContent.Visible = false
+                        rgbVisible = false
+                        wrap.Size = UDim2.new(1, 0, 0, 44) -- retour à la hauteur normale
+                    end
                 end)
             end
 
             local rgbBtn = Utility.Button({ Name = "RGBBtn", Text = "RGB", Color = Theme.TextPrimary, BgColor = Theme.ButtonBg, FrameSize = UDim2.new(0, 40, 0, 22), Position = UDim2.new(1, -40, 0, 0), Parent = swatchScroll })
             Utility.Corner(rgbBtn, UDim.new(0, 6))
 
-            local rgbContainer = nil
-            local rgbVisible = false
-
             rgbBtn.MouseButton1Click:Connect(function()
                 if rgbVisible then
-                    if rgbContainer then rgbContainer.Visible = false end
+                    if rgbContent then rgbContent.Visible = false end
                     rgbVisible = false
+                    wrap.Size = UDim2.new(1, 0, 0, 44)  -- rétrécir
                 else
-                    if not rgbContainer then
-                        rgbContainer = CreateRGBPicker(wrap, currentColor, function(color)
+                    if not rgbContent then
+                        rgbContent = CreateRGBPickerContent(wrap, currentColor, function(color)
                             currentColor = color
                             pcall(callback, color)
                             if saveKey and configName then
@@ -1111,9 +1115,11 @@ function NexusLib:CreateWindow(opts)
                                 Configs.Save(configName, cfg)
                             end
                         end)
+                        rgbContent.Visible = false
                     end
-                    rgbContainer.Visible = true
+                    rgbContent.Visible = true
                     rgbVisible = true
+                    wrap.Size = UDim2.new(1, 0, 0, 44 + 110 + 8) -- hauteur originale + picker + marge
                 end
             end)
 
