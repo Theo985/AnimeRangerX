@@ -13,9 +13,59 @@ local UserInputService = game:GetService("UserInputService")
 local RunService     = game:GetService("RunService")
 local Lighting       = game:GetService("Lighting")
 local Workspace      = game:GetService("Workspace")
+local HttpService    = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Mouse       = LocalPlayer:GetMouse()
+
+-- ============================================================
+-- CONFIGURATION SYSTEM
+-- ============================================================
+
+local Configs = {}
+local ConfigFolder = "AetherX"
+
+-- Create folder if not exists
+if not isfolder then
+    -- For executors that don't support isfolder, we'll use pcall
+    pcall(function()
+        if not isfolder(ConfigFolder) then
+            makefolder(ConfigFolder)
+        end
+    end)
+else
+    if not isfolder(ConfigFolder) then
+        makefolder(ConfigFolder)
+    end
+end
+
+function Configs:Load(configName)
+    local filePath = ConfigFolder .. "/" .. configName .. ".json"
+    local success, data = pcall(function()
+        return readfile(filePath)
+    end)
+    if success and data then
+        local success2, decoded = pcall(function()
+            return HttpService:JSONDecode(data)
+        end)
+        if success2 then
+            return decoded
+        end
+    end
+    return {}
+end
+
+function Configs:Save(configName, data)
+    local filePath = ConfigFolder .. "/" .. configName .. ".json"
+    local success, encoded = pcall(function()
+        return HttpService:JSONEncode(data)
+    end)
+    if success then
+        pcall(function()
+            writefile(filePath, encoded)
+        end)
+    end
+end
 
 -- ============================================================
 -- DEFAULT THEME
@@ -345,7 +395,7 @@ local function Notify(opts)
 end
 
 -- ============================================================
--- PLAYER PROFILE CARD (Fixed position in content area)
+-- PLAYER PROFILE CARD (avec vrai avatar)
 -- ============================================================
 
 local function CreatePlayerProfile(parent)
@@ -359,54 +409,22 @@ local function CreatePlayerProfile(parent)
     Utility.Corner(profileCard, UDim.new(0, 10))
     Utility.Stroke(profileCard, Theme.ElementBorder, 1)
     
-    -- Avatar container (head)
-    local avatarContainer = Utility.Frame({
-        Name     = "AvatarContainer",
-        Color    = Theme.Accent,
-        Size     = UDim2.new(0, 50, 0, 50),
-        Position = UDim2.new(0, 12, 0.5, -25),
-        Parent   = profileCard,
-    })
-    Utility.Corner(avatarContainer, UDim.new(0, 12))
+    -- Avatar image (real player thumbnail)
+    local avatarImage = Instance.new("ImageLabel")
+    avatarImage.Name = "AvatarImage"
+    avatarImage.Size = UDim2.new(0, 50, 0, 50)
+    avatarImage.Position = UDim2.new(0, 12, 0.5, -25)
+    avatarImage.BackgroundTransparency = 1
+    avatarImage.Parent = profileCard
+    Utility.Corner(avatarImage, UDim.new(0, 12))
     
-    -- Avatar head (simulated)
-    local avatarHead = Utility.Frame({
-        Name     = "AvatarHead",
-        Color    = Color3.fromRGB(255, 220, 180),
-        Size     = UDim2.new(0, 30, 0, 30),
-        Position = UDim2.new(0.5, -15, 0.5, -15),
-        Parent   = avatarContainer,
-    })
-    Utility.Corner(avatarHead, UDim.new(0, 8))
+    -- Load player avatar thumbnail
+    local userId = LocalPlayer.UserId
+    local thumbnailUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=150&height=150&format=png"
+    avatarImage.Image = thumbnailUrl
     
-    -- Eyes
-    local leftEye = Utility.Frame({
-        Name     = "LeftEye",
-        Color    = Color3.fromRGB(0, 0, 0),
-        Size     = UDim2.new(0, 6, 0, 6),
-        Position = UDim2.new(0, 6, 0, 8),
-        Parent   = avatarHead,
-    })
-    Utility.Corner(leftEye, UDim.new(0, 3))
-    
-    local rightEye = Utility.Frame({
-        Name     = "RightEye",
-        Color    = Color3.fromRGB(0, 0, 0),
-        Size     = UDim2.new(0, 6, 0, 6),
-        Position = UDim2.new(0, 18, 0, 8),
-        Parent   = avatarHead,
-    })
-    Utility.Corner(rightEye, UDim.new(0, 3))
-    
-    -- Smile
-    local smile = Utility.Frame({
-        Name     = "Smile",
-        Color    = Color3.fromRGB(0, 0, 0),
-        Size     = UDim2.new(0, 12, 0, 2),
-        Position = UDim2.new(0, 9, 0, 20),
-        Parent   = avatarHead,
-    })
-    Utility.Corner(smile, UDim.new(0, 1))
+    -- Fallback in case image fails to load
+    avatarImage.ImageTransparency = 0
     
     -- Player name
     local playerName = Utility.Label({
@@ -438,31 +456,232 @@ local function CreatePlayerProfile(parent)
         Parent    = profileCard,
     })
     
-    -- Level badge
-    local levelBadge = Utility.Frame({
-        Name     = "LevelBadge",
-        Color    = Theme.Accent,
-        Size     = UDim2.new(0, 50, 0, 22),
-        Position = UDim2.new(1, -62, 0.5, -11),
-        Parent   = profileCard,
-    })
-    Utility.Corner(levelBadge, UDim.new(0, 6))
-    
-    local levelText = Utility.Label({
-        Text      = "LVL 42",
-        Color     = Theme.TextPrimary,
-        Font      = Theme.FontBold,
-        Size      = 11,
-        FrameSize = UDim2.new(1, 0, 1, 0),
-        Align     = Enum.TextXAlignment.Center,
-        Parent    = levelBadge,
-    })
-    
     -- Animation d'entrée
     profileCard.Position = UDim2.new(0, 12, 0, -70)
     Utility.Tween(profileCard, { Position = UDim2.new(0, 12, 0, 12) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
     
     return profileCard
+end
+
+-- ============================================================
+-- RGB COLOR PICKER
+-- ============================================================
+
+local function CreateRGBPicker(parent, currentColor, callback)
+    local pickerFrame = Utility.Frame({
+        Name     = "RGBPicker",
+        Color    = Theme.ElementBg,
+        Size     = UDim2.new(1, 0, 0, 100),
+        Parent   = parent,
+    })
+    Utility.Corner(pickerFrame)
+    Utility.Stroke(pickerFrame, Theme.ElementBorder, 1)
+    
+    local r, g, b = currentColor.R, currentColor.G, currentColor.B
+    
+    -- Red slider
+    local redLabel = Utility.Label({
+        Text = "Rouge: " .. math.floor(r * 255),
+        Color = Theme.TextSecondary,
+        Size = 11,
+        FrameSize = UDim2.new(0, 60, 0, 20),
+        Position = UDim2.new(0, 10, 0, 8),
+        Parent = pickerFrame,
+    })
+    
+    local redSlider = Utility.Frame({
+        Name = "RedSlider",
+        Color = Color3.fromRGB(255, 0, 0),
+        Size = UDim2.new(1, -80, 0, 4),
+        Position = UDim2.new(0, 70, 0, 16),
+        Parent = pickerFrame,
+    })
+    Utility.Corner(redSlider)
+    
+    local redFill = Utility.Frame({
+        Name = "RedFill",
+        Color = Color3.fromRGB(255, 255, 255),
+        Size = UDim2.new(r, 0, 1, 0),
+        Parent = redSlider,
+    })
+    Utility.Corner(redFill)
+    
+    local redKnob = Utility.Button({
+        Name = "RedKnob",
+        Text = "",
+        BgColor = Color3.fromRGB(255, 255, 255),
+        FrameSize = UDim2.new(0, 12, 0, 12),
+        Position = UDim2.new(r, -6, 0.5, -6),
+        Parent = redSlider,
+    })
+    Utility.Corner(redKnob, UDim.new(0, 6))
+    
+    -- Green slider
+    local greenLabel = Utility.Label({
+        Text = "Vert: " .. math.floor(g * 255),
+        Color = Theme.TextSecondary,
+        Size = 11,
+        FrameSize = UDim2.new(0, 60, 0, 20),
+        Position = UDim2.new(0, 10, 0, 36),
+        Parent = pickerFrame,
+    })
+    
+    local greenSlider = Utility.Frame({
+        Name = "GreenSlider",
+        Color = Color3.fromRGB(0, 255, 0),
+        Size = UDim2.new(1, -80, 0, 4),
+        Position = UDim2.new(0, 70, 0, 44),
+        Parent = pickerFrame,
+    })
+    Utility.Corner(greenSlider)
+    
+    local greenFill = Utility.Frame({
+        Name = "GreenFill",
+        Color = Color3.fromRGB(255, 255, 255),
+        Size = UDim2.new(g, 0, 1, 0),
+        Parent = greenSlider,
+    })
+    Utility.Corner(greenFill)
+    
+    local greenKnob = Utility.Button({
+        Name = "GreenKnob",
+        Text = "",
+        BgColor = Color3.fromRGB(255, 255, 255),
+        FrameSize = UDim2.new(0, 12, 0, 12),
+        Position = UDim2.new(g, -6, 0.5, -6),
+        Parent = greenSlider,
+    })
+    Utility.Corner(greenKnob, UDim.new(0, 6))
+    
+    -- Blue slider
+    local blueLabel = Utility.Label({
+        Text = "Bleu: " .. math.floor(b * 255),
+        Color = Theme.TextSecondary,
+        Size = 11,
+        FrameSize = UDim2.new(0, 60, 0, 20),
+        Position = UDim2.new(0, 10, 0, 64),
+        Parent = pickerFrame,
+    })
+    
+    local blueSlider = Utility.Frame({
+        Name = "BlueSlider",
+        Color = Color3.fromRGB(0, 0, 255),
+        Size = UDim2.new(1, -80, 0, 4),
+        Position = UDim2.new(0, 70, 0, 72),
+        Parent = pickerFrame,
+    })
+    Utility.Corner(blueSlider)
+    
+    local blueFill = Utility.Frame({
+        Name = "BlueFill",
+        Color = Color3.fromRGB(255, 255, 255),
+        Size = UDim2.new(b, 0, 1, 0),
+        Parent = blueSlider,
+    })
+    Utility.Corner(blueFill)
+    
+    local blueKnob = Utility.Button({
+        Name = "BlueKnob",
+        Text = "",
+        BgColor = Color3.fromRGB(255, 255, 255),
+        FrameSize = UDim2.new(0, 12, 0, 12),
+        Position = UDim2.new(b, -6, 0.5, -6),
+        Parent = blueSlider,
+    })
+    Utility.Corner(blueKnob, UDim.new(0, 6))
+    
+    -- Preview color
+    local preview = Utility.Frame({
+        Name = "Preview",
+        Color = currentColor,
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(1, -40, 0.5, -15),
+        Parent = pickerFrame,
+    })
+    Utility.Corner(preview, UDim.new(0, 6))
+    
+    local dragging = {red = false, green = false, blue = false}
+    
+    local function updateColor()
+        local newColor = Color3.new(r, g, b)
+        preview.BackgroundColor3 = newColor
+        pcall(callback, newColor)
+    end
+    
+    redSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging.red = true
+            local pos = math.clamp((Mouse.X - redSlider.AbsolutePosition.X) / redSlider.AbsoluteSize.X, 0, 1)
+            r = pos
+            redFill.Size = UDim2.new(r, 0, 1, 0)
+            redKnob.Position = UDim2.new(r, -6, 0.5, -6)
+            redLabel.Text = "Rouge: " .. math.floor(r * 255)
+            updateColor()
+        end
+    end)
+    
+    greenSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging.green = true
+            local pos = math.clamp((Mouse.X - greenSlider.AbsolutePosition.X) / greenSlider.AbsoluteSize.X, 0, 1)
+            g = pos
+            greenFill.Size = UDim2.new(g, 0, 1, 0)
+            greenKnob.Position = UDim2.new(g, -6, 0.5, -6)
+            greenLabel.Text = "Vert: " .. math.floor(g * 255)
+            updateColor()
+        end
+    end)
+    
+    blueSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging.blue = true
+            local pos = math.clamp((Mouse.X - blueSlider.AbsolutePosition.X) / blueSlider.AbsoluteSize.X, 0, 1)
+            b = pos
+            blueFill.Size = UDim2.new(b, 0, 1, 0)
+            blueKnob.Position = UDim2.new(b, -6, 0.5, -6)
+            blueLabel.Text = "Bleu: " .. math.floor(b * 255)
+            updateColor()
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            if dragging.red then
+                local pos = math.clamp((Mouse.X - redSlider.AbsolutePosition.X) / redSlider.AbsoluteSize.X, 0, 1)
+                r = pos
+                redFill.Size = UDim2.new(r, 0, 1, 0)
+                redKnob.Position = UDim2.new(r, -6, 0.5, -6)
+                redLabel.Text = "Rouge: " .. math.floor(r * 255)
+                updateColor()
+            end
+            if dragging.green then
+                local pos = math.clamp((Mouse.X - greenSlider.AbsolutePosition.X) / greenSlider.AbsoluteSize.X, 0, 1)
+                g = pos
+                greenFill.Size = UDim2.new(g, 0, 1, 0)
+                greenKnob.Position = UDim2.new(g, -6, 0.5, -6)
+                greenLabel.Text = "Vert: " .. math.floor(g * 255)
+                updateColor()
+            end
+            if dragging.blue then
+                local pos = math.clamp((Mouse.X - blueSlider.AbsolutePosition.X) / blueSlider.AbsoluteSize.X, 0, 1)
+                b = pos
+                blueFill.Size = UDim2.new(b, 0, 1, 0)
+                blueKnob.Position = UDim2.new(b, -6, 0.5, -6)
+                blueLabel.Text = "Bleu: " .. math.floor(b * 255)
+                updateColor()
+            end
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging.red = false
+            dragging.green = false
+            dragging.blue = false
+        end
+    end)
+    
+    return pickerFrame
 end
 
 -- ============================================================
@@ -476,7 +695,17 @@ function NexusLib:CreateWindow(opts)
     opts = opts or {}
     local title    = opts.Title    or "NexusLib"
     local subtitle = opts.Subtitle or "v1.0"
-    local size     = opts.Size     or UDim2.new(0, 560, 0, 480)
+    local size     = opts.Size     or UDim2.new(0, 580, 0, 520)
+    local configName = opts.ConfigName
+    
+    -- Load saved config if exists
+    local savedConfig = {}
+    if configName then
+        savedConfig = Configs.Load(configName)
+        if savedConfig.Theme then
+            UpdateTheme(savedConfig.Theme)
+        end
+    end
     
     if opts.AccentColor then
         UpdateTheme({ Accent = opts.AccentColor, TabActive = opts.AccentColor, ToggleOn = opts.AccentColor, SliderFill = opts.AccentColor })
@@ -554,7 +783,7 @@ function NexusLib:CreateWindow(opts)
         Parent    = topBar,
     })
 
-    -- Subtitle (more space from topbar)
+    -- Subtitle
     local subtitleLabel = Utility.Label({
         Text      = subtitle,
         Color     = Theme.SubtitleColor,
@@ -564,10 +793,7 @@ function NexusLib:CreateWindow(opts)
         Parent    = topBar,
     })
 
-    -- ============================================================
-    -- WINDOW CONTROLS (Moved more to the right)
-    -- ============================================================
-    
+    -- Window controls
     local btnGroup = Utility.Frame({
         Name     = "BtnGroup",
         Color    = Color3.fromRGB(0,0,0),
@@ -666,10 +892,7 @@ function NexusLib:CreateWindow(opts)
 
     Utility.MakeDraggable(window, topBar)
 
-    -- ============================================================
-    -- TAB SYSTEM
-    -- ============================================================
-    
+    -- Tab system
     local tabBar = Utility.Frame({
         Name     = "TabBar",
         Color    = Theme.TopBar,
@@ -726,6 +949,29 @@ function NexusLib:CreateWindow(opts)
     local WindowObj  = {}
     local tabs       = {}
     local activeTab  = nil
+    
+    -- Save config function
+    local function saveConfig()
+        if not configName then return end
+        local configToSave = {
+            Theme = {
+                Accent = Theme.Accent,
+                TabActive = Theme.TabActive,
+                ToggleOn = Theme.ToggleOn,
+                SliderFill = Theme.SliderFill,
+                NotifySuccess = Theme.NotifySuccess,
+                NotifyWarning = Theme.NotifyWarning,
+                NotifyError = Theme.NotifyError,
+                TextPrimary = Theme.TextPrimary,
+                TextSecondary = Theme.TextSecondary,
+                TitleColor = Theme.TitleColor,
+                ButtonBg = Theme.ButtonBg,
+                ButtonHover = Theme.ButtonHover,
+                ButtonText = Theme.ButtonText,
+            }
+        }
+        Configs.Save(configName, configToSave)
+    end
 
     function WindowObj:AddTab(name, icon)
         local tabData = {}
@@ -779,7 +1025,6 @@ function NexusLib:CreateWindow(opts)
                 }, 0.15)
             end
             tabContent.Visible = true
-            -- Animate tab content fade in
             tabContent.BackgroundTransparency = 1
             Utility.Tween(tabContent, { BackgroundTransparency = 0 }, 0.2)
             Utility.Tween(tabBtn, {
@@ -809,10 +1054,7 @@ function NexusLib:CreateWindow(opts)
 
         table.insert(tabs, tabData)
 
-        -- ============================================================
-        -- ELEMENTS
-        -- ============================================================
-
+        -- Elements
         local function MakeWrapper(height)
             local wrap = Utility.Frame({
                 Name   = "Element",
@@ -822,7 +1064,6 @@ function NexusLib:CreateWindow(opts)
             })
             Utility.Corner(wrap)
             Utility.Stroke(wrap, Theme.ElementBorder, 1)
-            -- Animation d'entrée
             wrap.BackgroundTransparency = 1
             wrap.Position = UDim2.new(0, 0, 0, 20)
             Utility.Tween(wrap, { BackgroundTransparency = 0, Position = UDim2.new(0, 0, 0, 0) }, 0.3)
@@ -848,6 +1089,7 @@ function NexusLib:CreateWindow(opts)
             local name     = opts.Name     or "Toggle"
             local default  = opts.Default  or false
             local callback = opts.Callback or function() end
+            local saveKey  = opts.SaveKey
 
             local wrap = MakeWrapper(44)
 
@@ -886,6 +1128,16 @@ function NexusLib:CreateWindow(opts)
                     Position = toggled and UDim2.new(0, 22, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
                 }, 0.2)
                 pcall(callback, toggled)
+                if saveKey and configName then
+                    local config = Configs.Load(configName)
+                    config[saveKey] = toggled
+                    Configs.Save(configName, config)
+                end
+            end
+
+            -- Load saved value
+            if saveKey and configName and savedConfig[saveKey] ~= nil then
+                setToggle(savedConfig[saveKey])
             end
 
             wrap.InputBegan:Connect(function(input)
@@ -977,6 +1229,7 @@ function NexusLib:CreateWindow(opts)
             local default  = opts.Default  or min
             local suffix   = opts.Suffix   or ""
             local callback = opts.Callback or function() end
+            local saveKey  = opts.SaveKey
 
             local wrap = MakeWrapper(64)
 
@@ -1035,6 +1288,16 @@ function NexusLib:CreateWindow(opts)
                 Utility.Tween(knob,  { Position = UDim2.new(pct, -8, 0.5, -8) }, 0.05)
                 valLabel.Text = tostring(val) .. suffix
                 pcall(callback, val)
+                if saveKey and configName then
+                    local config = Configs.Load(configName)
+                    config[saveKey] = val
+                    Configs.Save(configName, config)
+                end
+            end
+
+            -- Load saved value
+            if saveKey and configName and savedConfig[saveKey] ~= nil then
+                setValue(savedConfig[saveKey])
             end
 
             local function updateFromMouse()
@@ -1083,6 +1346,7 @@ function NexusLib:CreateWindow(opts)
             local list     = opts.List     or {}
             local default  = opts.Default  or list[1]
             local callback = opts.Callback or function() end
+            local saveKey  = opts.SaveKey
 
             local wrap = MakeWrapper(44)
             wrap.ClipsDescendants = false
@@ -1172,7 +1436,19 @@ function NexusLib:CreateWindow(opts)
                     dropBtn.Text = item
                     closeDropdown()
                     pcall(callback, item)
+                    if saveKey and configName then
+                        local config = Configs.Load(configName)
+                        config[saveKey] = item
+                        Configs.Save(configName, config)
+                    end
                 end)
+            end
+
+            -- Load saved value
+            if saveKey and configName and savedConfig[saveKey] then
+                selected = savedConfig[saveKey]
+                dropBtn.Text = selected
+                pcall(callback, selected)
             end
 
             local itemCount = #list
@@ -1212,6 +1488,7 @@ function NexusLib:CreateWindow(opts)
             local default     = opts.Default     or ""
             local numeric     = opts.Numeric     or false
             local callback    = opts.Callback    or function() end
+            local saveKey     = opts.SaveKey
 
             local wrap = MakeWrapper(44)
 
@@ -1240,6 +1517,11 @@ function NexusLib:CreateWindow(opts)
                 Parent      = inputFrame,
             })
 
+            -- Load saved value
+            if saveKey and configName and savedConfig[saveKey] then
+                input.Text = tostring(savedConfig[saveKey])
+            end
+
             input.Focused:Connect(function()
                 Utility.Tween(inputFrame, { BackgroundColor3 = Theme.ElementHover }, 0.1)
                 Utility.Stroke(inputFrame, Theme.Accent, 1)
@@ -1253,6 +1535,11 @@ function NexusLib:CreateWindow(opts)
                     input.Text = tostring(txt)
                 end
                 pcall(callback, txt, enterPressed)
+                if saveKey and configName then
+                    local config = Configs.Load(configName)
+                    config[saveKey] = txt
+                    Configs.Save(configName, config)
+                end
             end)
 
             wrap.MouseEnter:Connect(function()
@@ -1273,6 +1560,7 @@ function NexusLib:CreateWindow(opts)
             local name     = opts.Name     or "Keybind"
             local default  = opts.Default  or Enum.KeyCode.F
             local callback = opts.Callback or function() end
+            local saveKey  = opts.SaveKey
 
             local wrap = MakeWrapper(44)
 
@@ -1301,6 +1589,12 @@ function NexusLib:CreateWindow(opts)
             local listening  = false
             local kbObj      = {}
 
+            -- Load saved value
+            if saveKey and configName and savedConfig[saveKey] then
+                currentKey = Enum.KeyCode[savedConfig[saveKey]] or default
+                keyBtn.Text = "[" .. currentKey.Name .. "]"
+            end
+
             keyBtn.MouseButton1Click:Connect(function()
                 listening = true
                 keyBtn.Text = "[...]"
@@ -1313,6 +1607,11 @@ function NexusLib:CreateWindow(opts)
                     currentKey = input.KeyCode
                     keyBtn.Text = "[" .. input.KeyCode.Name .. "]"
                     keyBtn.TextColor3 = Theme.Accent
+                    if saveKey and configName then
+                        local config = Configs.Load(configName)
+                        config[saveKey] = input.KeyCode.Name
+                        Configs.Save(configName, config)
+                    end
                 elseif not listening and input.KeyCode == currentKey and not gameProcessed then
                     pcall(callback, currentKey)
                 end
@@ -1334,6 +1633,7 @@ function NexusLib:CreateWindow(opts)
             local name     = opts.Name     or "Color"
             local default  = opts.Default  or Theme.Accent
             local callback = opts.Callback or function() end
+            local saveKey  = opts.SaveKey
 
             local wrap = MakeWrapper(44)
 
@@ -1357,6 +1657,14 @@ function NexusLib:CreateWindow(opts)
 
             local currentColor = default
             local cpObj = {}
+            local rgbPickerVisible = false
+            local rgbPicker = nil
+
+            -- Load saved value
+            if saveKey and configName and savedConfig[saveKey] then
+                local saved = savedConfig[saveKey]
+                currentColor = Color3.new(saved.r, saved.g, saved.b)
+            end
 
             local swatchHolder = Utility.Frame({
                 Name     = "Swatches",
@@ -1384,8 +1692,49 @@ function NexusLib:CreateWindow(opts)
                 sw.MouseButton1Click:Connect(function()
                     currentColor = col
                     pcall(callback, col)
+                    if saveKey and configName then
+                        local config = Configs.Load(configName)
+                        config[saveKey] = {r = col.R, g = col.G, b = col.B}
+                        Configs.Save(configName, config)
+                    end
+                    if rgbPicker then rgbPicker.Visible = false end
                 end)
             end
+            
+            -- RGB button
+            local rgbBtn = Utility.Button({
+                Name      = "RGBBtn",
+                Text      = "RGB",
+                Color     = Theme.TextPrimary,
+                BgColor   = Theme.ButtonBg,
+                FrameSize = UDim2.new(0, 40, 0, 22),
+                Position  = UDim2.new(1, -40, 0, 0),
+                Parent    = swatchHolder,
+            })
+            Utility.Corner(rgbBtn, UDim.new(0, 6))
+            
+            rgbBtn.MouseButton1Click:Connect(function()
+                if rgbPickerVisible then
+                    if rgbPicker then rgbPicker.Visible = false end
+                    rgbPickerVisible = false
+                else
+                    if not rgbPicker then
+                        rgbPicker = CreateRGBPicker(wrap, currentColor, function(color)
+                            currentColor = color
+                            pcall(callback, color)
+                            if saveKey and configName then
+                                local config = Configs.Load(configName)
+                                config[saveKey] = {r = color.R, g = color.G, b = color.B}
+                                Configs.Save(configName, config)
+                            end
+                        end)
+                        rgbPicker.Position = UDim2.new(0, 14, 1, 4)
+                        rgbPicker.Size = UDim2.new(1, -28, 0, 100)
+                    end
+                    rgbPicker.Visible = true
+                    rgbPickerVisible = true
+                end
+            end)
 
             function cpObj:Get() return currentColor end
             return cpObj
@@ -1424,7 +1773,7 @@ function NexusLib:CreateWindow(opts)
         Notify(opts)
     end
 
-    -- Theme update listener
+    -- Theme update listener with auto-save
     OnThemeChange(function(newTheme)
         window.BackgroundColor3 = newTheme.Background
         topBar.BackgroundColor3 = newTheme.TopBar
@@ -1435,15 +1784,13 @@ function NexusLib:CreateWindow(opts)
         tabBar.BackgroundColor3 = newTheme.TopBar
         tabBarDivider.BackgroundColor3 = newTheme.Border
         contentArea.BackgroundColor3 = newTheme.Background
+        saveConfig()
         
-        -- Update profile card
         if playerProfile then
             playerProfile.BackgroundColor3 = newTheme.ElementBg
             Utility.Stroke(playerProfile, newTheme.ElementBorder, 1)
             local avatarContainer = playerProfile:FindFirstChild("AvatarContainer")
             if avatarContainer then avatarContainer.BackgroundColor3 = newTheme.Accent end
-            local levelBadge = playerProfile:FindFirstChild("LevelBadge")
-            if levelBadge then levelBadge.BackgroundColor3 = newTheme.Accent end
             local playerName = playerProfile:FindFirstChild("PlayerName")
             if playerName then playerName.TextColor3 = newTheme.TextPrimary end
         end
