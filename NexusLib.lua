@@ -3,6 +3,7 @@
     - Dynamic title: "Title | GameName"
     - Tab ordering: Home pinned top, system tabs pinned bottom
     - Key system with 24h timer
+    - "Keyless" mode: pass KeyName = "Keyless" to skip key check
 ]]
 
 local Players          = game:GetService("Players")
@@ -53,9 +54,6 @@ end
 -- ============================================================
 -- KEY SYSTEM
 -- ============================================================
--- Keys are stored in AetherX/keys.json
--- Format: { ["keyName"] = { expiry = unixTimestamp } }
--- AddKeyTime("keypass") adds 24 hours to the key timer
 
 local KeySystem = {}
 local KEY_FILE  = "keys"
@@ -68,7 +66,6 @@ function KeySystem:SaveData(data)
     Configs:Save(KEY_FILE, data)
 end
 
--- Returns remaining seconds for a key (0 = expired or not found)
 function KeySystem:GetRemaining(key)
     if not key then return 0 end
     local data = self:GetData()
@@ -80,7 +77,6 @@ function KeySystem:IsValid(key)
     return self:GetRemaining(key) > 0
 end
 
--- Adds seconds to a key (default 86400 = 24h). Creates it if needed.
 function KeySystem:AddTime(key, seconds)
     seconds = seconds or 86400
     local data  = self:GetData()
@@ -94,7 +90,6 @@ function KeySystem:AddTime(key, seconds)
     return data[key].expiry
 end
 
--- Formats seconds into "Xd Xh Xm"
 function KeySystem:FormatTime(secs)
     if secs <= 0 then return "Expired" end
     local d = math.floor(secs / 86400)
@@ -292,7 +287,7 @@ local function Notify(opts)
 end
 
 -- ============================================================
--- PLAYER PROFILE  (username + key timer)
+-- PLAYER PROFILE  (username + key timer / Keyless)
 -- ============================================================
 
 local function CreatePlayerProfile(parent, keyName)
@@ -306,22 +301,30 @@ local function CreatePlayerProfile(parent, keyName)
     Utility.Label({Text=LocalPlayer.Name,Color=Theme.TextPrimary,Font=Theme.FontBold,Size=14,FrameSize=UDim2.new(1,-80,0,22),Position=UDim2.new(0,72,0,10),Parent=card})
     local dot=Utility.Frame({Color=Theme.NotifySuccess,Size=UDim2.new(0,8,0,8),Position=UDim2.new(0,72,0,38),Parent=card}); Utility.Corner(dot,UDim.new(0,4))
 
-    -- Key label (right side of the card)
-    local rem    = keyName and KeySystem:GetRemaining(keyName) or 0
-    local keyTxt = rem > 0 and KeySystem:FormatTime(rem) or "Expired key"
-    local keyCol = rem > 0 and Theme.NotifySuccess or Theme.NotifyError
+    -- ✅ Si keyName == "Keyless", afficher "Keyless" en vert sans vérifier le timer
+    local keyTxt, keyCol
+    if keyName == "Keyless" then
+        keyTxt = "Keyless"
+        keyCol = Theme.NotifySuccess
+    else
+        local rem = keyName and KeySystem:GetRemaining(keyName) or 0
+        keyTxt = rem > 0 and KeySystem:FormatTime(rem) or "Expired key"
+        keyCol = rem > 0 and Theme.NotifySuccess or Theme.NotifyError
+    end
 
     local keyLabel=Utility.Label({Text=keyTxt,Color=keyCol,Size=11,Font=Theme.FontBold,Align=Enum.TextXAlignment.Right,FrameSize=UDim2.new(0,110,0,18),Position=UDim2.new(1,-122,0.5,-9),Parent=card})
 
-    -- Live update every 60 seconds
-    task.spawn(function()
-        while card.Parent do
-            task.wait(60)
-            local r = keyName and KeySystem:GetRemaining(keyName) or 0
-            keyLabel.Text       = r>0 and KeySystem:FormatTime(r) or "Expired key"
-            keyLabel.TextColor3 = r>0 and Theme.NotifySuccess or Theme.NotifyError
-        end
-    end)
+    -- Live update seulement si ce n'est pas Keyless
+    if keyName ~= "Keyless" then
+        task.spawn(function()
+            while card.Parent do
+                task.wait(60)
+                local r = keyName and KeySystem:GetRemaining(keyName) or 0
+                keyLabel.Text       = r>0 and KeySystem:FormatTime(r) or "Expired key"
+                keyLabel.TextColor3 = r>0 and Theme.NotifySuccess or Theme.NotifyError
+            end
+        end)
+    end
 
     card.Position=UDim2.new(0,12,0,-70)
     Utility.Tween(card,{Position=UDim2.new(0,12,0,12)},0.4,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
@@ -393,13 +396,12 @@ NexusLib.__index = NexusLib
 function NexusLib:CreateWindow(opts)
     opts = opts or {}
     local scriptTitle = opts.Title    or "NexusLib"
-    local gameName    = opts.GameName  -- if provided, title becomes "Title | GameName"
+    local gameName    = opts.GameName
     local subtitle    = opts.Subtitle or "v1.2"
     local size        = opts.Size     or UDim2.new(0,580,0,520)
     local configName  = opts.ConfigName
-    local keyName     = opts.KeyName   -- key identifier for the timer display
+    local keyName     = opts.KeyName
 
-    -- "AetherX | ARX"  or just  "AetherX"
     local displayTitle = gameName and (scriptTitle.." | "..gameName) or scriptTitle
 
     local savedConfig = {}
@@ -420,7 +422,6 @@ function NexusLib:CreateWindow(opts)
     local shadow=Utility.Frame({Name="Shadow",Color=Color3.fromRGB(0,0,0),Size=UDim2.new(1,20,1,20),Position=UDim2.new(0,-10,0,-10),Parent=window})
     shadow.BackgroundTransparency=0.65; shadow.ZIndex=0; Utility.Corner(shadow,UDim.new(0,16))
 
-    -- Top bar
     local topBar    =Utility.Frame({Name="TopBar",   Color=Theme.TopBar,Size=UDim2.new(1,0,0,56),Parent=window})
     local accentLine=Utility.Frame({Name="Accent",   Color=Theme.Accent,Size=UDim2.new(1,0,0,2),Position=UDim2.new(0,0,0,56),Parent=window})
     local logoBar   =Utility.Frame({Name="LogoBar",  Color=Theme.Accent,Size=UDim2.new(0,4,0,28),Position=UDim2.new(0,16,0.5,-14),Parent=topBar})
@@ -453,19 +454,9 @@ function NexusLib:CreateWindow(opts)
     end)
     Utility.MakeDraggable(window,topBar)
 
-    -- ============================================================
-    -- TAB BAR — 3-zone ordering
-    --
-    --  ZONE A (top scroll)    : Home (LayoutOrder=0) + user tabs (1,2,3…)
-    --  ZONE B (bottom pinned) : Customization(0) / Settings(1) / Info(2)
-    --
-    -- bottomSection height = 3 tabs × 40px + padding + separator = ~148px
-    -- ============================================================
-
     local tabBar=Utility.Frame({Name="TabBar",Color=Theme.TopBar,Size=UDim2.new(0,160,1,-58),Position=UDim2.new(0,0,0,58),Parent=window})
     Utility.Frame({Name="Divider",Color=Theme.Border,Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,0,0,0),Parent=tabBar})
 
-    -- Top scroll (Home + user tabs)
     local topScroll=Instance.new("ScrollingFrame"); topScroll.Name="TopScroll"
     topScroll.BackgroundTransparency=1; topScroll.BorderSizePixel=0
     topScroll.ScrollBarThickness=3; topScroll.ScrollBarImageColor3=Theme.Accent
@@ -475,7 +466,6 @@ function NexusLib:CreateWindow(opts)
     topList.HorizontalAlignment=Enum.HorizontalAlignment.Center; topList.Padding=UDim.new(0,4); topList.Parent=topScroll
     Utility.Padding(topScroll,12,4,10,10)
 
-    -- Bottom section (system tabs)
     local bottomSection=Utility.Frame({Name="BottomTabs",Color=Theme.TopBar,Size=UDim2.new(1,0,0,152),Position=UDim2.new(0,0,1,-152),Parent=tabBar})
     Utility.Frame({Name="Sep",Color=Theme.Border,Size=UDim2.new(1,-20,0,1),Position=UDim2.new(0,10,0,0),Parent=bottomSection})
     local bottomList=Instance.new("UIListLayout"); bottomList.SortOrder=Enum.SortOrder.LayoutOrder
@@ -495,8 +485,6 @@ function NexusLib:CreateWindow(opts)
         for _,k in ipairs({"Accent","TabActive","ToggleOn","SliderFill","NotifySuccess","NotifyWarning","NotifyError","TextPrimary","TextSecondary","TitleColor","ButtonBg","ButtonHover","ButtonText"}) do cfg.Theme[k]=Theme[k] end
         pcall(Configs.Save,Configs,configName,cfg)
     end
-
-    -- ── Core tab builder (used by all three AddXxxTab methods) ──
 
     local function buildTab(name, icon, parentContainer, layoutOrder)
         local tabBtn=Utility.Button({Name=name.."Tab",Text=(icon and (icon.."  ") or "")..name,Color=Theme.TabTextOff,BgColor=Theme.TabInactive,Font=Theme.Font,FrameSize=UDim2.new(1,-10,0,36),Parent=parentContainer})
@@ -739,41 +727,33 @@ function NexusLib:CreateWindow(opts)
         return tabData, activate
     end
 
-    -- ── Home tab (always first, LayoutOrder = 0)
     function WindowObj:AddHomeTab(name, icon)
         name = name or "Home"
         local tabData, activate = buildTab(name, icon, topScroll, 0)
-        if #tabs == 0 then activate() end  -- Home is the default active tab
+        if #tabs == 0 then activate() end
         table.insert(tabs, 1, tabData)
         return tabData
     end
 
-    -- ── Regular user tabs (LayoutOrder = 1, 2, 3…)
     function WindowObj:AddTab(name, icon)
         userTabCount = userTabCount + 1
         local tabData, activate = buildTab(name, icon, topScroll, userTabCount)
-        -- If somehow no tab is active yet, activate this one
         if not activeTab then activate() end
         table.insert(tabs, tabData)
         return tabData
     end
 
-    -- ── System tabs pinned at bottom (LayoutOrder matters within bottomSection)
-    -- Call order: Customization=0, Settings=1, Info=2
     function WindowObj:AddSystemTab(name, icon, order)
         local tabData, _ = buildTab(name, icon, bottomSection, order or 0)
         table.insert(tabs, tabData)
         return tabData
     end
 
-    -- ── Notify
     function WindowObj:Notify(opts) Notify(opts) end
 
-    -- ── Key management
-    -- Pass the key name (e.g. "keypass") to add 24h
     function WindowObj:AddKeyTime(key, seconds)
         local expiry = KeySystem:AddTime(key, seconds or 86400)
-        if keyLabel then
+        if keyLabel and keyName ~= "Keyless" then
             local rem = KeySystem:GetRemaining(key)
             keyLabel.Text       = KeySystem:FormatTime(rem)
             keyLabel.TextColor3 = Theme.NotifySuccess
